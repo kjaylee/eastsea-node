@@ -4,6 +4,13 @@ const ProgramResult = @import("program.zig").ProgramResult;
 const Instruction = @import("program.zig").Instruction;
 const AccountData = @import("program.zig").AccountData;
 
+/// Helper function to add formatted log messages without memory leaks
+fn addFormattedLog(result: *ProgramResult, allocator: std.mem.Allocator, comptime fmt: []const u8, args: anytype) !void {
+    const formatted_msg = try std.fmt.allocPrint(allocator, fmt, args);
+    defer allocator.free(formatted_msg);
+    try result.addLog(formatted_msg);
+}
+
 /// 사용자 정의 프로그램 인터페이스
 pub const CustomProgram = struct {
     id: [32]u8,
@@ -226,7 +233,7 @@ pub fn calculatorProgramEntryPoint(
         else => unreachable,
     };
     
-    try result.addLog(try std.fmt.allocPrint(allocator, "{s}: {d} op {d} = {d}", .{ operation_name, operand1, operand2, result_value }));
+    try addFormattedLog(result, allocator, "{s}: {d} op {d} = {d}", .{ operation_name, operand1, operand2, result_value });
     try result.addLog("Calculation completed successfully");
 }
 
@@ -256,7 +263,7 @@ pub fn votingProgramEntryPoint(
                 return;
             }
             const proposal_id = instruction.data[1];
-            try result.addLog(try std.fmt.allocPrint(allocator, "Proposal {d} created successfully", .{proposal_id}));
+            try addFormattedLog(result, allocator, "Proposal {d} created successfully", .{proposal_id});
         },
         1 => { // Cast vote
             try result.addLog("Casting vote");
@@ -267,7 +274,7 @@ pub fn votingProgramEntryPoint(
             const proposal_id = instruction.data[1];
             const vote_choice = instruction.data[2]; // 0 = No, 1 = Yes
             const vote_text = if (vote_choice == 1) "Yes" else "No";
-            try result.addLog(try std.fmt.allocPrint(allocator, "Vote cast: {s} for proposal {d}", .{ vote_text, proposal_id }));
+            try addFormattedLog(result, allocator, "Vote cast: {s} for proposal {d}", .{ vote_text, proposal_id });
         },
         2 => { // Get results
             try result.addLog("Getting voting results");
@@ -277,7 +284,7 @@ pub fn votingProgramEntryPoint(
             }
             const proposal_id = instruction.data[1];
             // 실제로는 계정 데이터에서 투표 결과를 읽어야 함
-            try result.addLog(try std.fmt.allocPrint(allocator, "Proposal {d} results: Yes: 5, No: 3", .{proposal_id}));
+            try addFormattedLog(result, allocator, "Proposal {d} results: Yes: 5, No: 3", .{proposal_id});
         },
         else => {
             try result.setError("Unknown voting command");
@@ -316,7 +323,7 @@ pub fn tokenSwapProgramEntryPoint(
             }
             const amount = instruction.data[1];
             // 간단한 1:1 스왑 비율
-            try result.addLog(try std.fmt.allocPrint(allocator, "Swapped {d} Token A for {d} Token B", .{ amount, amount }));
+            try addFormattedLog(result, allocator, "Swapped {d} Token A for {d} Token B", .{ amount, amount });
         },
         2 => { // Swap Token B for Token A
             try result.addLog("Swapping Token B for Token A");
@@ -325,7 +332,7 @@ pub fn tokenSwapProgramEntryPoint(
                 return;
             }
             const amount = instruction.data[1];
-            try result.addLog(try std.fmt.allocPrint(allocator, "Swapped {d} Token B for {d} Token A", .{ amount, amount }));
+            try addFormattedLog(result, allocator, "Swapped {d} Token B for {d} Token A", .{ amount, amount });
         },
         3 => { // Get pool info
             try result.addLog("Getting pool information");
