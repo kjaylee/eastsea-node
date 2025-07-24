@@ -327,7 +327,7 @@ pub const MDNSDiscovery = struct {
         // Generate unique service instance name
         var node_id: [8]u8 = undefined;
         std.crypto.random.bytes(&node_id);
-        const service_instance = try std.fmt.allocPrint(allocator, "{s}{}", .{ SERVICE_INSTANCE_PREFIX, std.fmt.fmtSliceHexLower(&node_id) });
+        const service_instance = try std.fmt.allocPrint(allocator, "{s}{s}", .{ SERVICE_INSTANCE_PREFIX, std.fmt.fmtSliceHexLower(&node_id) });
 
         return MDNSDiscovery{
             .allocator = allocator,

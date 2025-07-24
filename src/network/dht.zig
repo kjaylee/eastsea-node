@@ -28,7 +28,7 @@ pub const DHTNode = struct {
         var id: NodeId = undefined;
         
         // Generate deterministic ID based on address:port for consistency
-        const addr_str = try std.fmt.allocPrint(allocator, "{s}:{}", .{ address, port });
+        const addr_str = try std.fmt.allocPrint(allocator, "{s}:{d}", .{ address, port });
         defer allocator.free(addr_str);
         
         const hash = crypto.sha256Raw(addr_str);

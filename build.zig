@@ -127,6 +127,48 @@ pub fn build(b: *std.Build) void {
     const mdns_test_run_step = b.step("run-mdns", "Run the mDNS test");
     mdns_test_run_step.dependOn(&mdns_test_run_cmd.step);
 
+    // Auto Discovery Test executable (temporarily disabled due to fmt issues)
+    // const auto_discovery_test_exe = b.addExecutable(.{
+    //     .name = "auto-discovery-test",
+    //     .root_source_file = b.path("src/auto_discovery_test.zig"),
+    //     .target = target,
+    //     .optimize = optimize,
+    // });
+
+    // b.installArtifact(auto_discovery_test_exe);
+
+    // // Auto Discovery Test run command
+    // const auto_discovery_test_run_cmd = b.addRunArtifact(auto_discovery_test_exe);
+    // auto_discovery_test_run_cmd.step.dependOn(b.getInstallStep());
+
+    // if (b.args) |args| {
+    //     auto_discovery_test_run_cmd.addArgs(args);
+    // }
+
+    // const auto_discovery_test_run_step = b.step("run-auto-discovery", "Run the Auto Discovery test");
+    // auto_discovery_test_run_step.dependOn(&auto_discovery_test_run_cmd.step);
+
+    // UPnP Test executable
+    const upnp_test_exe = b.addExecutable(.{
+        .name = "upnp-test",
+        .root_source_file = b.path("src/upnp_test.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+
+    b.installArtifact(upnp_test_exe);
+
+    // UPnP Test run command
+    const upnp_test_run_cmd = b.addRunArtifact(upnp_test_exe);
+    upnp_test_run_cmd.step.dependOn(b.getInstallStep());
+
+    if (b.args) |args| {
+        upnp_test_run_cmd.addArgs(args);
+    }
+
+    const upnp_test_run_step = b.step("run-upnp", "Run the UPnP test");
+    upnp_test_run_step.dependOn(&upnp_test_run_cmd.step);
+
 
     // Tests
     const unit_tests = b.addTest(.{

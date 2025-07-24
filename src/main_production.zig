@@ -94,7 +94,7 @@ fn runProductionNode(allocator: std.mem.Allocator, config: Config) !void {
     try node.discoverPeers();
 
     // Initialize consensus engine
-    const node_id = try std.fmt.allocPrint(allocator, "node_{}", .{config.node_port});
+    const node_id = try std.fmt.allocPrint(allocator, "node_{d}", .{config.node_port});
     defer allocator.free(node_id);
     
     var consensus_engine = try consensus.ConsensusEngine.init(allocator, node_id);
@@ -224,7 +224,7 @@ fn runDemo(allocator: std.mem.Allocator) !void {
     };
 
     // Process transaction through consensus
-    const tx1_data = try std.fmt.allocPrint(allocator, "{s}{s}{}{}", .{ tx1.from, tx1.to, tx1.amount, tx1.timestamp });
+    const tx1_data = try std.fmt.allocPrint(allocator, "{s}{s}{d}{d}", .{ tx1.from, tx1.to, tx1.amount, tx1.timestamp });
     defer allocator.free(tx1_data);
     
     try consensus_engine.processTransaction(tx1_data);
@@ -244,7 +244,7 @@ fn runDemo(allocator: std.mem.Allocator) !void {
     print("⛏️  New block mined! Height: {}\n", .{chain.getHeight()});
 
     const poh_state = consensus_engine.getCurrentPohState();
-    print("🕐 PoH State - Ticks: {}, Hash: {}\n", .{ poh_state.tick_count, std.fmt.fmtSliceHexLower(poh_state.hash[0..8]) });
+    print("🕐 PoH State - Ticks: {}, Hash: {s}\n", .{ poh_state.tick_count, std.fmt.fmtSliceHexLower(poh_state.hash[0..8]) });
 
     // Demo 4: Network operations
     print("\n4️⃣  Network operations...\n", .{});

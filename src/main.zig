@@ -71,7 +71,7 @@ pub fn main() !void {
     };
 
     // Process transaction through consensus
-    const tx1_data = try std.fmt.allocPrint(allocator, "{s}{s}{}{}", .{ tx1.from, tx1.to, tx1.amount, tx1.timestamp });
+    const tx1_data = try std.fmt.allocPrint(allocator, "{s}{s}{d}{d}", .{ tx1.from, tx1.to, tx1.amount, tx1.timestamp });
     defer allocator.free(tx1_data);
     
     try consensus_engine.processTransaction(tx1_data);
@@ -91,7 +91,7 @@ pub fn main() !void {
     print("⛏️  New block mined! Height: {}\n", .{chain.getHeight()});
 
     const poh_state = consensus_engine.getCurrentPohState();
-    print("🕐 PoH State - Ticks: {}, Hash: {}\n", .{ poh_state.tick_count, std.fmt.fmtSliceHexLower(poh_state.hash[0..8]) });
+    print("🕐 PoH State - Ticks: {}, Hash: {s}\n", .{ poh_state.tick_count, std.fmt.fmtSliceHexLower(poh_state.hash[0..8]) });
 
     // Demo 4: Network operations
     print("\n4️⃣  Network operations...\n", .{});

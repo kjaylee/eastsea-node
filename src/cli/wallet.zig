@@ -25,7 +25,7 @@ pub const KeyPair = struct {
         
         // Take first 20 bytes and encode as hex
         const address = try allocator.alloc(u8, 40);
-        _ = std.fmt.bufPrint(address, "{}", .{std.fmt.fmtSliceHexLower(address_hash[0..20])}) catch unreachable;
+        _ = std.fmt.bufPrint(address, "{s}", .{std.fmt.fmtSliceHexLower(address_hash[0..20])}) catch unreachable;
         
         return address;
     }

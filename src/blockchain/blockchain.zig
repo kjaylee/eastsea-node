@@ -8,7 +8,7 @@ pub const Transaction = struct {
     timestamp: i64,
 
     pub fn hash(self: *const Transaction, allocator: std.mem.Allocator) ![]u8 {
-        const data = try std.fmt.allocPrint(allocator, "{s}{s}{}{}", .{ self.from, self.to, self.amount, self.timestamp });
+        const data = try std.fmt.allocPrint(allocator, "{s}{s}{d}{d}", .{ self.from, self.to, self.amount, self.timestamp });
         defer allocator.free(data);
         return crypto.sha256(allocator, data);
     }
@@ -50,7 +50,7 @@ pub const Block = struct {
         defer tx_data.deinit();
 
         for (self.transactions.items) |tx| {
-            const tx_str = try std.fmt.allocPrint(allocator, "{s}{s}{}{}", .{ tx.from, tx.to, tx.amount, tx.timestamp });
+            const tx_str = try std.fmt.allocPrint(allocator, "{s}{s}{d}{d}", .{ tx.from, tx.to, tx.amount, tx.timestamp });
             defer allocator.free(tx_str);
             try tx_data.appendSlice(tx_str);
         }

@@ -324,7 +324,7 @@ pub const P2PNode = struct {
     }
 
     pub fn sendHandshake(self: *P2PNode, peer: *PeerConnection) !void {
-        const handshake_data = try std.fmt.allocPrint(self.allocator, "HANDSHAKE:{}", .{std.fmt.fmtSliceHexLower(&self.node_id)});
+        const handshake_data = try std.fmt.allocPrint(self.allocator, "HANDSHAKE:{s}", .{std.fmt.fmtSliceHexLower(&self.node_id)});
         defer self.allocator.free(handshake_data);
         
         var handshake_msg = try P2PMessage.init(self.allocator, 5, handshake_data);

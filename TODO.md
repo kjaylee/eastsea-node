@@ -34,11 +34,11 @@
 - [x] DHT (Distributed Hash Table) 구현
 - [x] Bootstrap 노드 시스템
 - [x] mDNS 로컬 피어 발견
-- [ ] UPnP 자동 포트 포워딩
+- [x] UPnP 자동 포트 포워딩
 - [ ] NAT 통과 (STUN/TURN)
-- [ ] 자동 피어 발견 및 연결
-- [ ] 포트 스캔을 통한 로컬 네트워크 탐색
-- [ ] 브로드캐스트/멀티캐스트 피어 공지
+- [x] 자동 피어 발견 및 연결
+- [x] 포트 스캔을 통한 로컬 네트워크 탐색
+- [x] 브로드캐스트/멀티캐스트 피어 공지
 - [ ] Tracker 서버 (선택적 중앙 피어 목록)
 
 ## Phase 5: 합의 메커니즘 (Proof of History 기반)
@@ -93,6 +93,10 @@
 #### 피어 발견 기능 변경 시
 - [ ] `zig build run-mdns -- 8000` - mDNS 테스트
 - [ ] `zig build run-bootstrap -- 8000` - Bootstrap 테스트
+- [ ] `zig build run-upnp -- 8000` - UPnP 포트 포워딩 테스트
+- [ ] `zig build run-port-scan -- 8000` - 포트 스캔 테스트
+- [ ] `zig build run-broadcast -- 8000` - 브로드캐스트 공지 테스트
+- [ ] `zig build run-auto-discovery -- 8000` - 통합 자동 발견 테스트
 
 #### 블록체인 코어 기능 변경 시
 - [ ] 블록 생성 및 검증 테스트
@@ -113,6 +117,9 @@
   - [ ] `zig build run-dht`
   - [ ] `zig build run-bootstrap`
   - [ ] `zig build run-mdns`
+  - [ ] `zig build run-auto-discovery`
+  - [ ] `zig build run-port-scan`
+  - [ ] `zig build run-broadcast`
 - [ ] 단위 테스트 통과: `zig build test`
 - [ ] 메모리 안전성 확인
 - [ ] 다양한 시나리오에서 안정성 테스트
@@ -184,9 +191,9 @@ zig build run
 ## 현재 진행 상황
 - ✅ Phase 1-5, 7-8 완료!
 - ✅ Phase 4: 기본 P2P 네트워킹 완료!
-- 🚧 Phase 4.5: 고급 P2P 네트워킹 (자동 피어 발견) - DHT 구현 완료!
+- ✅ Phase 4.5: 고급 P2P 네트워킹 (자동 피어 발견) - DHT, Bootstrap, mDNS, UPnP 구현 완료!
 - 🚀 기본적인 Eastsea 클론이 성공적으로 구현됨
-- 다음 단계: Bootstrap 노드 시스템 또는 mDNS 로컬 피어 발견 구현
+- 다음 단계: NAT 통과 (STUN/TURN) 또는 자동 피어 발견 및 연결 구현
 
 ## 구현된 주요 기능
 ✅ **블록체인 코어**
@@ -210,6 +217,9 @@ zig build run
 - 체크섬 기반 메시지 무결성 검증
 - 피어 연결 상태 관리
 - DHT (Distributed Hash Table) 기반 자동 피어 발견
+- Bootstrap 노드 시스템
+- mDNS 로컬 피어 발견
+- UPnP 자동 포트 포워딩
 
 ✅ **JSON-RPC API**
 - 블록 높이 조회

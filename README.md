@@ -12,6 +12,9 @@ zig로 eastsea 클론 만들기. todo 리스트 만들어서, context가 모자�
 - ✅ 블록 및 트랜잭션 브로드캐스팅
 - ✅ 피어 상태 모니터링 (ping/pong)
 - ✅ DHT (Distributed Hash Table) 기반 자동 피어 발견
+- ✅ UPnP 자동 포트 포워딩
+- ✅ 포트 스캔을 통한 로컬 네트워크 탐색
+- ✅ 브로드캐스트/멀티캐스트 피어 공지
 
 ## ⚡ 빠른 시작
 
@@ -61,6 +64,18 @@ zig build run-bootstrap -- 8000
 
 # mDNS 로컬 피어 발견 테스트
 zig build run-mdns -- 8000
+
+# UPnP 자동 포트 포워딩 테스트
+zig build run-upnp -- 8000
+
+# 포트 스캔을 통한 로컬 피어 발견 테스트
+zig build run-port-scan -- 8000
+
+# 브로드캐스트/멀티캐스트 피어 공지 테스트
+zig build run-broadcast -- 8000
+
+# 통합 자동 피어 발견 테스트
+zig build run-auto-discovery -- 8000
 ```
 
 ## 🧪 테스트 및 검증
