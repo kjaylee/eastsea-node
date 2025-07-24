@@ -301,7 +301,7 @@ fn runPerformanceBenchmark(allocator: std.mem.Allocator) !void {
     const data = [_]u8{};
     const instruction = Instruction.init(hello_program_id, accounts[0..], data[0..]);
 
-    print("🏃 Running {} program executions...\n", .{iterations});
+    print("🏃 Running {d} program executions...\n", .{iterations});
 
     const start_time = std.time.milliTimestamp();
 
@@ -310,7 +310,7 @@ fn runPerformanceBenchmark(allocator: std.mem.Allocator) !void {
         result.deinit();
 
         if ((i + 1) % 100 == 0) {
-            print("Progress: {}/{}...\n", .{ i + 1, iterations });
+            print("Progress: {d}/{d}...\n", .{ i + 1, iterations });
         }
     }
 
@@ -319,8 +319,8 @@ fn runPerformanceBenchmark(allocator: std.mem.Allocator) !void {
 
     print("\n📊 Benchmark Results\n", .{});
     print("====================\n", .{});
-    print("Total executions: {}\n", .{iterations});
-    print("Total time: {}ms\n", .{duration});
+    print("Total executions: {d}\n", .{iterations});
+    print("Total time: {d}ms\n", .{duration});
     print("Average time per execution: {d:.2}ms\n", .{@as(f64, @floatFromInt(duration)) / @as(f64, @floatFromInt(iterations))});
     print("Executions per second: {d:.0}\n", .{@as(f64, @floatFromInt(iterations)) / (@as(f64, @floatFromInt(duration)) / 1000.0)});
 }

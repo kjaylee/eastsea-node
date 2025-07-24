@@ -169,47 +169,47 @@ pub fn build(b: *std.Build) void {
     const upnp_test_run_step = b.step("run-upnp", "Run the UPnP test");
     upnp_test_run_step.dependOn(&upnp_test_run_cmd.step);
 
-    // Programs/Smart Contracts Test executable (temporarily disabled due to fmt issues)
-    // const programs_test_exe = b.addExecutable(.{
-    //     .name = "programs-test",
-    //     .root_source_file = b.path("src/programs_test.zig"),
-    //     .target = target,
-    //     .optimize = optimize,
-    // });
+    // Programs/Smart Contracts Test executable
+    const programs_test_exe = b.addExecutable(.{
+        .name = "programs-test",
+        .root_source_file = b.path("src/programs_test.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
 
-    // b.installArtifact(programs_test_exe);
+    b.installArtifact(programs_test_exe);
 
-    // // Programs Test run command
-    // const programs_test_run_cmd = b.addRunArtifact(programs_test_exe);
-    // programs_test_run_cmd.step.dependOn(b.getInstallStep());
+    // Programs Test run command
+    const programs_test_run_cmd = b.addRunArtifact(programs_test_exe);
+    programs_test_run_cmd.step.dependOn(b.getInstallStep());
 
-    // if (b.args) |args| {
-    //     programs_test_run_cmd.addArgs(args);
-    // }
+    if (b.args) |args| {
+        programs_test_run_cmd.addArgs(args);
+    }
 
-    // const programs_test_run_step = b.step("run-programs", "Run the Smart Contracts (Programs) test");
-    // programs_test_run_step.dependOn(&programs_test_run_cmd.step);
+    const programs_test_run_step = b.step("run-programs", "Run the Smart Contracts (Programs) test");
+    programs_test_run_step.dependOn(&programs_test_run_cmd.step);
 
-    // STUN/NAT Traversal Test executable (temporarily disabled due to fmt issues)
-    // const stun_test_exe = b.addExecutable(.{
-    //     .name = "stun-test",
-    //     .root_source_file = b.path("src/stun_test_simple.zig"),
-    //     .target = target,
-    //     .optimize = optimize,
-    // });
+    // STUN/NAT Traversal Test executable
+    const stun_test_exe = b.addExecutable(.{
+        .name = "stun-test",
+        .root_source_file = b.path("src/stun_test_simple.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
 
-    // b.installArtifact(stun_test_exe);
+    b.installArtifact(stun_test_exe);
 
-    // // STUN Test run command
-    // const stun_test_run_cmd = b.addRunArtifact(stun_test_exe);
-    // stun_test_run_cmd.step.dependOn(b.getInstallStep());
+    // STUN Test run command
+    const stun_test_run_cmd = b.addRunArtifact(stun_test_exe);
+    stun_test_run_cmd.step.dependOn(b.getInstallStep());
 
-    // if (b.args) |args| {
-    //     stun_test_run_cmd.addArgs(args);
-    // }
+    if (b.args) |args| {
+        stun_test_run_cmd.addArgs(args);
+    }
 
-    // const stun_test_run_step = b.step("run-stun", "Run the STUN/NAT Traversal test");
-    // stun_test_run_step.dependOn(&stun_test_run_cmd.step);
+    const stun_test_run_step = b.step("run-stun", "Run the STUN/NAT Traversal test");
+    stun_test_run_step.dependOn(&stun_test_run_cmd.step);
 
     // Port Scanner Test executable (temporarily disabled due to compilation issues)
     // const port_scanner_test_exe = b.addExecutable(.{

@@ -322,7 +322,7 @@ pub const ProgramExecutor = struct {
             const program = entry.value_ptr;
             std.debug.print("  - {s} (ID: ", .{program.name});
             for (program.id[0..4]) |byte| {
-                std.debug.print("{:02x}", .{byte});
+                std.debug.print("{x:0>2}", .{byte});
             }
             std.debug.print("...)\n", .{});
         }
