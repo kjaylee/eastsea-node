@@ -254,6 +254,26 @@ pub fn build(b: *std.Build) void {
 
     const broadcast_test_run_step = b.step("run-broadcast", "Run the Broadcast test");
     broadcast_test_run_step.dependOn(&broadcast_test_run_cmd.step);
+    // Tracker Test executable
+    const tracker_test_exe = b.addExecutable(.{
+        .name = "tracker-test",
+        .root_source_file = b.path("src/tracker_test.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+
+    b.installArtifact(tracker_test_exe);
+
+    // Tracker Test run command
+    const tracker_test_run_cmd = b.addRunArtifact(tracker_test_exe);
+    tracker_test_run_cmd.step.dependOn(b.getInstallStep());
+
+    if (b.args) |args| {
+        tracker_test_run_cmd.addArgs(args);
+    }
+
+    const tracker_test_run_step = b.step("run-tracker", "Run the Tracker server/client test");
+    tracker_test_run_step.dependOn(&tracker_test_run_cmd.step);
 
     // Phase 9 Testing Framework executable (temporarily disabled due to print format issues)
     // const phase9_test_exe = b.addExecutable(.{
