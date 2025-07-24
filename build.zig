@@ -316,6 +316,27 @@ pub fn build(b: *std.Build) void {
     const phase9_test_run_step = b.step("run-phase9", "Run Phase 9 comprehensive testing framework");
     phase9_test_run_step.dependOn(&phase9_test_run_cmd.step);
 
+    // QUIC Protocol Test executable (Phase 13 - Future implementation)
+    const quic_test_exe = b.addExecutable(.{
+        .name = "quic-test",
+        .root_source_file = b.path("src/quic_test.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+
+    b.installArtifact(quic_test_exe);
+
+    // QUIC Test run command
+    const quic_test_run_cmd = b.addRunArtifact(quic_test_exe);
+    quic_test_run_cmd.step.dependOn(b.getInstallStep());
+
+    if (b.args) |args| {
+        quic_test_run_cmd.addArgs(args);
+    }
+
+    const quic_test_run_step = b.step("run-quic", "Run QUIC protocol test (Phase 13)");
+    quic_test_run_step.dependOn(&quic_test_run_cmd.step);
+
 
     // Tests
     const unit_tests = b.addTest(.{

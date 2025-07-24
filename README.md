@@ -135,6 +135,19 @@ zig build run-custom-programs -- voting
 zig build run-custom-programs -- token-swap
 zig build run-custom-programs -- all
 zig build run-custom-programs -- benchmark
+
+# Phase 9 테스트 프레임워크
+zig build run-phase9 -- performance
+zig build run-phase9 -- security
+zig build run-phase9 -- resilience
+zig build run-phase9 -- all
+
+# Phase 13 QUIC 프로토콜 테스트 (미래 구현)
+zig build run-quic -- basic
+zig build run-quic -- streams
+zig build run-quic -- security
+zig build run-quic -- performance
+zig build run-quic -- all
 ```
 
 ## 🧪 테스트 및 검증
