@@ -50,7 +50,7 @@ pub fn main() !void {
     
     print("🆔 Node ID: ", .{});
     for (node_id[0..8]) |byte| {
-        print("{:02x}", .{byte});
+        print("{x:0>2}", .{byte});
     }
     print("...\n\n", .{});
 
@@ -80,7 +80,7 @@ pub fn main() !void {
                 print("  {}. Address: {}\n", .{ i + 1, peer.address });
                 print("     Node ID: ", .{});
                 for (peer.node_id[0..8]) |byte| {
-                    print("{:02x}", .{byte});
+                    print("{x:0>2}", .{byte});
                 }
                 print("...\n", .{});
                 print("     Services: 0x{X}\n", .{peer.services});

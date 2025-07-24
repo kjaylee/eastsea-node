@@ -146,7 +146,7 @@ pub const BroadcastAnnouncer = struct {
     pub fn start(self: *Self, node_id: [32]u8) !void {
         if (self.is_running) return;
         
-        print("📢 Starting broadcast announcer on port {} (broadcast: {}, multicast: {}:{})\n", .{
+        print("📢 Starting broadcast announcer on port {} (broadcast: {}, multicast: {s}:{})\n", .{
             self.local_port, self.broadcast_port, self.multicast_group, self.multicast_port
         });
         

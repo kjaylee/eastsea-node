@@ -57,7 +57,6 @@ pub const PortScanner = struct {
     pub fn scanLocalNetwork(allocator: Allocator, base_port: u16) !*Self {
         // 로컬 IP 주소 자동 감지
         const local_ip = try detectLocalIP(allocator);
-        defer allocator.free(local_ip);
         
         // 기본 포트 목록 (base_port 주변)
         const default_ports = [_]u16{ base_port, base_port + 1, base_port + 2, 8000, 8001, 8002, 8080, 9000 };

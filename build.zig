@@ -127,26 +127,26 @@ pub fn build(b: *std.Build) void {
     const mdns_test_run_step = b.step("run-mdns", "Run the mDNS test");
     mdns_test_run_step.dependOn(&mdns_test_run_cmd.step);
 
-    // Auto Discovery Test executable (temporarily disabled due to fmt issues)
-    // const auto_discovery_test_exe = b.addExecutable(.{
-    //     .name = "auto-discovery-test",
-    //     .root_source_file = b.path("src/auto_discovery_test.zig"),
-    //     .target = target,
-    //     .optimize = optimize,
-    // });
+    // Auto Discovery Test executable
+    const auto_discovery_test_exe = b.addExecutable(.{
+        .name = "auto-discovery-test",
+        .root_source_file = b.path("src/auto_discovery_test.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
 
-    // b.installArtifact(auto_discovery_test_exe);
+    b.installArtifact(auto_discovery_test_exe);
 
-    // // Auto Discovery Test run command
-    // const auto_discovery_test_run_cmd = b.addRunArtifact(auto_discovery_test_exe);
-    // auto_discovery_test_run_cmd.step.dependOn(b.getInstallStep());
+    // Auto Discovery Test run command
+    const auto_discovery_test_run_cmd = b.addRunArtifact(auto_discovery_test_exe);
+    auto_discovery_test_run_cmd.step.dependOn(b.getInstallStep());
 
-    // if (b.args) |args| {
-    //     auto_discovery_test_run_cmd.addArgs(args);
-    // }
+    if (b.args) |args| {
+        auto_discovery_test_run_cmd.addArgs(args);
+    }
 
-    // const auto_discovery_test_run_step = b.step("run-auto-discovery", "Run the Auto Discovery test");
-    // auto_discovery_test_run_step.dependOn(&auto_discovery_test_run_cmd.step);
+    const auto_discovery_test_run_step = b.step("run-auto-discovery", "Run the Auto Discovery test");
+    auto_discovery_test_run_step.dependOn(&auto_discovery_test_run_cmd.step);
 
     // UPnP Test executable
     const upnp_test_exe = b.addExecutable(.{
@@ -213,47 +213,68 @@ pub fn build(b: *std.Build) void {
 
 
 
-    // Port Scanner Test executable (temporarily disabled due to compilation issues)
-    // const port_scanner_test_exe = b.addExecutable(.{
-    //     .name = "port-scanner-test",
-    //     .root_source_file = b.path("src/port_scanner_test.zig"),
+    // Port Scanner Test executable
+    const port_scanner_test_exe = b.addExecutable(.{
+        .name = "port-scanner-test",
+        .root_source_file = b.path("src/port_scanner_test.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+
+    b.installArtifact(port_scanner_test_exe);
+
+    // Port Scanner Test run command
+    const port_scanner_test_run_cmd = b.addRunArtifact(port_scanner_test_exe);
+    port_scanner_test_run_cmd.step.dependOn(b.getInstallStep());
+
+    if (b.args) |args| {
+        port_scanner_test_run_cmd.addArgs(args);
+    }
+
+    const port_scanner_test_run_step = b.step("run-port-scan", "Run the Port Scanner test");
+    port_scanner_test_run_step.dependOn(&port_scanner_test_run_cmd.step);
+
+    // Broadcast Test executable
+    const broadcast_test_exe = b.addExecutable(.{
+        .name = "broadcast-test",
+        .root_source_file = b.path("src/broadcast_test.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+
+    b.installArtifact(broadcast_test_exe);
+
+    // Broadcast Test run command
+    const broadcast_test_run_cmd = b.addRunArtifact(broadcast_test_exe);
+    broadcast_test_run_cmd.step.dependOn(b.getInstallStep());
+
+    if (b.args) |args| {
+        broadcast_test_run_cmd.addArgs(args);
+    }
+
+    const broadcast_test_run_step = b.step("run-broadcast", "Run the Broadcast test");
+    broadcast_test_run_step.dependOn(&broadcast_test_run_cmd.step);
+
+    // Phase 9 Testing Framework executable (temporarily disabled due to print format issues)
+    // const phase9_test_exe = b.addExecutable(.{
+    //     .name = "phase9-test",
+    //     .root_source_file = b.path("src/phase9_test.zig"),
     //     .target = target,
     //     .optimize = optimize,
     // });
 
-    // b.installArtifact(port_scanner_test_exe);
+    // b.installArtifact(phase9_test_exe);
 
-    // // Port Scanner Test run command
-    // const port_scanner_test_run_cmd = b.addRunArtifact(port_scanner_test_exe);
-    // port_scanner_test_run_cmd.step.dependOn(b.getInstallStep());
-
-    // if (b.args) |args| {
-    //     port_scanner_test_run_cmd.addArgs(args);
-    // }
-
-    // const port_scanner_test_run_step = b.step("run-port-scan", "Run the Port Scanner test");
-    // port_scanner_test_run_step.dependOn(&port_scanner_test_run_cmd.step);
-
-    // Broadcast Test executable (temporarily disabled due to compilation issues)
-    // const broadcast_test_exe = b.addExecutable(.{
-    //     .name = "broadcast-test",
-    //     .root_source_file = b.path("src/broadcast_test.zig"),
-    //     .target = target,
-    //     .optimize = optimize,
-    // });
-
-    // b.installArtifact(broadcast_test_exe);
-
-    // // Broadcast Test run command
-    // const broadcast_test_run_cmd = b.addRunArtifact(broadcast_test_exe);
-    // broadcast_test_run_cmd.step.dependOn(b.getInstallStep());
+    // // Phase 9 Test run command
+    // const phase9_test_run_cmd = b.addRunArtifact(phase9_test_exe);
+    // phase9_test_run_cmd.step.dependOn(b.getInstallStep());
 
     // if (b.args) |args| {
-    //     broadcast_test_run_cmd.addArgs(args);
+    //     phase9_test_run_cmd.addArgs(args);
     // }
 
-    // const broadcast_test_run_step = b.step("run-broadcast", "Run the Broadcast test");
-    // broadcast_test_run_step.dependOn(&broadcast_test_run_cmd.step);
+    // const phase9_test_run_step = b.step("run-phase9", "Run Phase 9 comprehensive testing framework");
+    // phase9_test_run_step.dependOn(&phase9_test_run_cmd.step);
 
 
     // Tests
