@@ -295,7 +295,7 @@ pub fn build(b: *std.Build) void {
     const tracker_test_run_step = b.step("run-tracker", "Run the Tracker server/client test");
     tracker_test_run_step.dependOn(&tracker_test_run_cmd.step);
 
-    // Phase 9 Testing Framework executable (temporarily disabled due to print format issues)
+    // Phase 9 Testing Framework executable (temporarily disabled due to Zig 0.14 format issues)
     // const phase9_test_exe = b.addExecutable(.{
     //     .name = "phase9-test",
     //     .root_source_file = b.path("src/phase9_test.zig"),
@@ -305,7 +305,7 @@ pub fn build(b: *std.Build) void {
 
     // b.installArtifact(phase9_test_exe);
 
-    // // Phase 9 Test run command
+    // Phase 9 Test run command
     // const phase9_test_run_cmd = b.addRunArtifact(phase9_test_exe);
     // phase9_test_run_cmd.step.dependOn(b.getInstallStep());
 

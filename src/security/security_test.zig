@@ -224,11 +224,11 @@ pub const SecurityTestFramework = struct {
     
     /// 보안 테스트 결과 요약
     pub fn printSecurityReport(self: *Self) void {
-        print("\n🛡️ Security Test Report\n");
-        print("======================\n");
+        print("\n🛡️ Security Test Report\n", .{});
+        print("======================\n", .{});
         
         if (self.test_results.items.len == 0) {
-            print("No security tests run.\n");
+            print("No security tests run.\n", .{});
             return;
         }
         
@@ -255,13 +255,13 @@ pub const SecurityTestFramework = struct {
             }
         }
         
-        print("\n📊 Security Test Summary:\n");
+        print("\n📊 Security Test Summary:\n", .{});
         print("  Total tests: {}\n", .{self.test_results.items.len});
         print("  Passed: {} ({d:.1}%)\n", .{ passed_count, @as(f64, @floatFromInt(passed_count)) / @as(f64, @floatFromInt(self.test_results.items.len)) * 100.0 });
         print("  Failed: {} ({d:.1}%)\n", .{ failed_count, @as(f64, @floatFromInt(failed_count)) / @as(f64, @floatFromInt(self.test_results.items.len)) * 100.0 });
         
         if (failed_count > 0) {
-            print("\n🚨 Security Issues by Severity:\n");
+            print("\n🚨 Security Issues by Severity:\n", .{});
             if (critical_failures > 0) print("  🔴 Critical: {}\n", .{critical_failures});
             if (high_failures > 0) print("  🟠 High: {}\n", .{high_failures});
             if (medium_failures > 0) print("  🟡 Medium: {}\n", .{medium_failures});
@@ -276,13 +276,13 @@ pub const SecurityTestFramework = struct {
         print("\n🏆 Overall Security Score: {d:.1}%\n", .{security_score});
         
         if (security_score >= 90.0) {
-            print("✅ Excellent security posture!\n");
+            print("✅ Excellent security posture!\n", .{});
         } else if (security_score >= 75.0) {
-            print("⚠️ Good security, but some improvements needed.\n");
+            print("⚠️ Good security, but some improvements needed.\n", .{});
         } else if (security_score >= 50.0) {
-            print("🚨 Moderate security risks detected. Address critical issues immediately.\n");
+            print("🚨 Moderate security risks detected. Address critical issues immediately.\n", .{});
         } else {
-            print("🔴 Serious security vulnerabilities detected! Immediate action required.\n");
+            print("🔴 Serious security vulnerabilities detected! Immediate action required.\n", .{});
         }
     }
     
@@ -293,30 +293,30 @@ pub const SecurityTestFramework = struct {
         
         const writer = file.writer();
         
-        try writer.print("{\n");
-        try writer.print("  \"security_test_report\": {\n");
+        try writer.print("{\n", .{});
+        try writer.print("  \"security_test_report\": {\n", .{});
         try writer.print("    \"timestamp\": \"{}\",\n", .{std.time.timestamp()});
         try writer.print("    \"total_tests\": {},\n", .{self.test_results.items.len});
-        try writer.print("    \"tests\": [\n");
+        try writer.print("    \"tests\": [\n", .{});
         
         for (self.test_results.items, 0..) |result, i| {
-            try writer.print("      {\n");
+            try writer.print("      {\n", .{});
             try writer.print("        \"name\": \"{s}\",\n", .{result.test_name});
             try writer.print("        \"category\": \"{s}\",\n", .{@tagName(result.category)});
             try writer.print("        \"severity\": \"{s}\",\n", .{@tagName(result.severity)});
             try writer.print("        \"passed\": {},\n", .{result.passed});
             try writer.print("        \"description\": \"{s}\",\n", .{result.description});
             try writer.print("        \"recommendation\": \"{s}\"\n", .{result.recommendation});
-            try writer.print("      }");
+            try writer.print("      }", .{});
             if (i < self.test_results.items.len - 1) {
-                try writer.print(",");
+                try writer.print(",", .{});
             }
-            try writer.print("\n");
+            try writer.print("\n", .{});
         }
         
-        try writer.print("    ]\n");
-        try writer.print("  }\n");
-        try writer.print("}\n");
+        try writer.print("    ]\n", .{});
+        try writer.print("  }\n", .{});
+        try writer.print("}\n", .{});
         
         print("📄 Security report exported to: {s}\n", .{filename});
     }

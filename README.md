@@ -35,6 +35,51 @@ zig build run-dht -- 8000   # 터미널 1
 zig build run-dht -- 8001 8000  # 터미널 2
 ```
 
+## 📚 Documentation
+
+### 📖 Complete Documentation Suite
+
+Eastsea provides comprehensive documentation for all user types:
+
+#### 🎯 For Users
+- **[User Guide](docs/USER_GUIDE.md)** - Complete guide for end users
+  - Installation and setup
+  - Basic operations and wallet management
+  - Network participation
+  - Smart contract usage
+  - Troubleshooting and FAQ
+
+#### 👨‍💻 For Developers  
+- **[Developer Guide](docs/DEVELOPER_GUIDE.md)** - Comprehensive development documentation
+  - Architecture overview and core components
+  - Development workflow and coding standards
+  - Testing strategies and contribution guidelines
+  - Advanced topics and performance optimization
+
+#### 🔌 For API Integration
+- **[API Documentation](docs/API.md)** - Complete API reference
+  - JSON-RPC API endpoints
+  - P2P network protocols
+  - Smart contract interfaces
+  - Error codes and examples
+
+#### 💡 For Learning
+- **[Code Examples](docs/EXAMPLES.md)** - Practical code examples
+  - Basic usage patterns
+  - Advanced network features
+  - Smart contract development
+  - Performance optimization techniques
+
+### 🚀 Quick Documentation Access
+
+```bash
+# View documentation locally
+open docs/USER_GUIDE.md      # For users
+open docs/DEVELOPER_GUIDE.md # For developers  
+open docs/API.md             # For API reference
+open docs/EXAMPLES.md        # For code examples
+```
+
 ## 🛠️ 사용법
 
 ### 기본 실행

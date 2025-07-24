@@ -290,7 +290,7 @@ pub const NetworkFailureTestFramework = struct {
         // 예: 트랜잭션 처리량, 블록 생성 속도, 응답 시간 등
         
         // 시뮬레이션을 위한 랜덤 성능 값
-        var prng = std.rand.DefaultPrng.init(@as(u64, @intCast(std.time.milliTimestamp())));
+        var prng = std.Random.DefaultPrng.init(@as(u64, @intCast(std.time.milliTimestamp())));
         const random = prng.random();
         return 100.0 + random.float(f64) * 50.0; // 100-150 ops/sec
     }
@@ -304,7 +304,7 @@ pub const NetworkFailureTestFramework = struct {
         // 예: 해시 체인 검증, 머클 루트 확인 등
         
         // 시뮬레이션을 위한 랜덤 결과
-        var prng = std.rand.DefaultPrng.init(@as(u64, @intCast(std.time.milliTimestamp())));
+        var prng = std.Random.DefaultPrng.init(@as(u64, @intCast(std.time.milliTimestamp())));
         const random = prng.random();
         return random.float(f64) > 0.1; // 90% 확률로 무결성 유지
     }
@@ -313,7 +313,7 @@ pub const NetworkFailureTestFramework = struct {
     fn applyNetworkCondition(self: *Self, condition: NetworkCondition) !void {
         _ = self;
         
-        print("  Applying network condition:\n");
+        print("  Applying network condition:\n", .{});
         print("    Latency: {}ms\n", .{condition.latency_ms});
         print("    Packet loss: {d:.1}%\n", .{condition.packet_loss_rate * 100.0});
         print("    Bandwidth: {} kbps\n", .{condition.bandwidth_kbps});
@@ -329,13 +329,13 @@ pub const NetworkFailureTestFramework = struct {
         _ = self;
         
         // 실제 구현에서는 네트워크 조건을 정상으로 복원
-        print("  Restoring normal network conditions\n");
+        print("  Restoring normal network conditions\n", .{});
     }
     
     /// 종합 복원력 테스트 실행
     pub fn runResilienceTestSuite(self: *Self, target_system: anytype) !void {
-        print("🛡️ Starting Network Resilience Test Suite\n");
-        print("==========================================\n");
+        print("🛡️ Starting Network Resilience Test Suite\n", .{});
+        print("==========================================\n", .{});
         
         // 다양한 장애 시나리오 실행
         try self.testNetworkPartition(target_system);
@@ -355,16 +355,16 @@ pub const NetworkFailureTestFramework = struct {
         
         try self.testEclipseAttack(target_system);
         
-        print("\n✅ Network Resilience Test Suite completed\n");
+        print("\n✅ Network Resilience Test Suite completed\n", .{});
     }
     
     /// 테스트 결과 요약 출력
     pub fn printResilienceReport(self: *Self) void {
-        print("\n🌩️ Network Resilience Test Report\n");
-        print("=================================\n");
+        print("\n🌩️ Network Resilience Test Report\n", .{});
+        print("=================================\n", .{});
         
         if (self.test_results.items.len == 0) {
-            print("No network failure tests run.\n");
+            print("No network failure tests run.\n", .{});
             return;
         }
         
@@ -384,7 +384,7 @@ pub const NetworkFailureTestFramework = struct {
             total_performance_impact += result.performance_impact;
         }
         
-        print("\n📊 Resilience Summary:\n");
+        print("\n📊 Resilience Summary:\n", .{});
         print("  Total scenarios tested: {}\n", .{total_tests});
         print("  Successfully recovered: {} ({d:.1}%)\n", .{ 
             recovered_tests, 
@@ -407,13 +407,13 @@ pub const NetworkFailureTestFramework = struct {
         print("\n🏆 Overall Resilience Score: {d:.1}%\n", .{overall_resilience_score});
         
         if (overall_resilience_score >= 90.0) {
-            print("✅ Excellent network resilience!\n");
+            print("✅ Excellent network resilience!\n", .{});
         } else if (overall_resilience_score >= 75.0) {
-            print("⚠️ Good resilience, minor improvements recommended.\n");
+            print("⚠️ Good resilience, minor improvements recommended.\n", .{});
         } else if (overall_resilience_score >= 50.0) {
-            print("🚨 Moderate resilience issues detected.\n");
+            print("🚨 Moderate resilience issues detected.\n", .{});
         } else {
-            print("🔴 Poor network resilience! Critical improvements needed.\n");
+            print("🔴 Poor network resilience! Critical improvements needed.\n", .{});
         }
     }
     
@@ -424,14 +424,14 @@ pub const NetworkFailureTestFramework = struct {
         
         const writer = file.writer();
         
-        try writer.print("{\n");
-        try writer.print("  \"network_resilience_report\": {\n");
+        try writer.print("{\n", .{});
+        try writer.print("  \"network_resilience_report\": {\n", .{});
         try writer.print("    \"timestamp\": \"{}\",\n", .{std.time.timestamp()});
         try writer.print("    \"total_scenarios\": {},\n", .{self.test_results.items.len});
-        try writer.print("    \"scenarios\": [\n");
+        try writer.print("    \"scenarios\": [\n", .{});
         
         for (self.test_results.items, 0..) |result, i| {
-            try writer.print("      {\n");
+            try writer.print("      {\n", .{});
             try writer.print("        \"name\": \"{s}\",\n", .{result.scenario_name});
             try writer.print("        \"failure_type\": \"{s}\",\n", .{@tagName(result.failure_type)});
             try writer.print("        \"duration_seconds\": {},\n", .{result.duration_seconds});
@@ -440,16 +440,16 @@ pub const NetworkFailureTestFramework = struct {
             try writer.print("        \"system_recovered\": {},\n", .{result.system_recovered});
             try writer.print("        \"performance_impact\": {d:.3},\n", .{result.performance_impact});
             try writer.print("        \"description\": \"{s}\"\n", .{result.description});
-            try writer.print("      }");
+            try writer.print("      }", .{});
             if (i < self.test_results.items.len - 1) {
-                try writer.print(",");
+                try writer.print(",", .{});
             }
-            try writer.print("\n");
+            try writer.print("\n", .{});
         }
         
-        try writer.print("    ]\n");
-        try writer.print("  }\n");
-        try writer.print("}\n");
+        try writer.print("    ]\n", .{});
+        try writer.print("  }\n", .{});
+        try writer.print("}\n", .{});
         
         print("📄 Network resilience report exported to: {s}\n", .{filename});
     }

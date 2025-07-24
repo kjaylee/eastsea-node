@@ -135,11 +135,11 @@ fn runAllTests(allocator: std.mem.Allocator) !void {
 
     // 성능 테스트
     try runPerformanceTests(allocator);
-    print("\n" ++ "="*50 ++ "\n", .{});
+    print("\n==================================================\n", .{});
 
     // 보안 테스트
     try runSecurityTests(allocator);
-    print("\n" ++ "="*50 ++ "\n", .{});
+    print("\n==================================================\n", .{});
 
     // 복원력 테스트
     try runResilienceTests(allocator);
