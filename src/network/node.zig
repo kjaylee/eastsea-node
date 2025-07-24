@@ -1,6 +1,7 @@
 const std = @import("std");
 const crypto = @import("../crypto/hash.zig");
 const p2p = @import("p2p.zig");
+const dht = @import("dht.zig");
 
 pub const NodeId = [32]u8;
 
@@ -54,6 +55,7 @@ pub const Node = struct {
     allocator: std.mem.Allocator,
     is_running: bool,
     p2p_node: ?*p2p.P2PNode,
+    dht: ?*dht.DHT,
 
     pub fn init(allocator: std.mem.Allocator, address: []const u8, port: u16) Node {
         var id: NodeId = undefined;
@@ -67,10 +69,15 @@ pub const Node = struct {
             .allocator = allocator,
             .is_running = false,
             .p2p_node = null,
+            .dht = null,
         };
     }
 
     pub fn deinit(self: *Node) void {
+        if (self.dht) |dht_instance| {
+            dht_instance.deinit();
+            self.allocator.destroy(dht_instance);
+        }
         if (self.p2p_node) |p2p_node| {
             p2p_node.deinit();
             self.allocator.destroy(p2p_node);
@@ -84,11 +91,20 @@ pub const Node = struct {
         p2p_node.* = try p2p.P2PNode.init(self.allocator, self.port);
         self.p2p_node = p2p_node;
         
+        // Initialize DHT
+        const dht_instance = try self.allocator.create(dht.DHT);
+        dht_instance.* = try dht.DHT.init(self.allocator, self.address, self.port);
+        self.dht = dht_instance;
+        
+        // Attach DHT to P2P node
+        try dht_instance.attachP2PNode(p2p_node);
+        
         try p2p_node.start();
         
         self.is_running = true;
         std.debug.print("🌐 Node started on {s}:{}\n", .{ self.address, self.port });
         std.debug.print("🆔 Node ID: {}\n", .{std.fmt.fmtSliceHexLower(&self.id)});
+        std.debug.print("🔗 DHT initialized\n", .{});
     }
 
     pub fn stop(self: *Node) void {
@@ -229,33 +245,81 @@ pub const Node = struct {
     }
 
     pub fn discoverPeers(self: *Node) !void {
-        std.debug.print("🔍 Discovering peers...\n", .{});
+        std.debug.print("🔍 Discovering peers using DHT...\n", .{});
         
-        // In a real implementation, this would:
-        // 1. Query known seed nodes
-        // 2. Use DHT (Distributed Hash Table)
-        // 3. Use mDNS for local discovery
-        // 4. Connect to bootstrap nodes
-        
-        // For demo, add some mock peers
-        const mock_peers = [_]PeerInfo{
-            PeerInfo.init("127.0.0.1", 8001),
-            PeerInfo.init("127.0.0.1", 8002),
-            PeerInfo.init("127.0.0.1", 8003),
-        };
-        
-        for (mock_peers) |peer| {
-            try self.addPeer(peer);
-        }
-        
-        // Try to connect to some peers using P2P
-        if (self.p2p_node != null) {
-            self.connectToPeer("127.0.0.1", 8001) catch |err| {
-                std.debug.print("⚠️  Could not connect to peer 8001: {}\n", .{err});
+        if (self.dht) |dht_instance| {
+            // Bootstrap with some known nodes (in real implementation, these would be from config)
+            var bootstrap_nodes = std.ArrayList(dht.DHTNode).init(self.allocator);
+            defer bootstrap_nodes.deinit();
+            
+            // Add some bootstrap nodes (these would be well-known nodes in the network)
+            const bootstrap_addresses = [_]struct { address: []const u8, port: u16 }{
+                .{ .address = "127.0.0.1", .port = 8001 },
+                .{ .address = "127.0.0.1", .port = 8002 },
+                .{ .address = "127.0.0.1", .port = 8003 },
             };
-            self.connectToPeer("127.0.0.1", 8002) catch |err| {
-                std.debug.print("⚠️  Could not connect to peer 8002: {}\n", .{err});
+            
+            for (bootstrap_addresses) |addr| {
+                if (addr.port != self.port) { // Don't add ourselves
+                    const bootstrap_node = try dht.DHTNode.init(self.allocator, addr.address, addr.port);
+                    try bootstrap_nodes.append(bootstrap_node);
+                }
+            }
+            
+            // Bootstrap the DHT
+            if (bootstrap_nodes.items.len > 0) {
+                try dht_instance.bootstrap(bootstrap_nodes.items);
+                
+                // Find nodes close to our ID to populate routing table
+                const close_nodes = try dht_instance.findNode(dht_instance.local_node.id);
+                defer close_nodes.deinit();
+                
+                // Try to connect to discovered nodes
+                for (close_nodes.items) |discovered_node| {
+                    self.connectToPeer(discovered_node.address, discovered_node.port) catch |err| {
+                        std.debug.print("⚠️  Could not connect to discovered peer {s}:{}: {}\n", .{ discovered_node.address, discovered_node.port, err });
+                    };
+                }
+                
+                // Show DHT status
+                dht_instance.getNodeInfo();
+            } else {
+                std.debug.print("⚠️  No bootstrap nodes available for DHT\n", .{});
+            }
+            
+            // Clean up bootstrap nodes
+            for (bootstrap_nodes.items) |*bootstrap_node| {
+                bootstrap_node.deinit(self.allocator);
+            }
+        } else {
+            // Fallback to legacy peer discovery
+            std.debug.print("🔍 Using legacy peer discovery...\n", .{});
+            
+            // In a real implementation, this would:
+            // 1. Query known seed nodes
+            // 2. Use mDNS for local discovery
+            // 3. Connect to bootstrap nodes
+            
+            // For demo, add some mock peers
+            const mock_peers = [_]PeerInfo{
+                PeerInfo.init("127.0.0.1", 8001),
+                PeerInfo.init("127.0.0.1", 8002),
+                PeerInfo.init("127.0.0.1", 8003),
             };
+            
+            for (mock_peers) |peer| {
+                try self.addPeer(peer);
+            }
+            
+            // Try to connect to some peers using P2P
+            if (self.p2p_node != null) {
+                self.connectToPeer("127.0.0.1", 8001) catch |err| {
+                    std.debug.print("⚠️  Could not connect to peer 8001: {}\n", .{err});
+                };
+                self.connectToPeer("127.0.0.1", 8002) catch |err| {
+                    std.debug.print("⚠️  Could not connect to peer 8002: {}\n", .{err});
+                };
+            }
         }
     }
 

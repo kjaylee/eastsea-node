@@ -31,9 +31,9 @@
 - [x] 핸드셰이크 프로토콜
 
 ## Phase 4.5: 고급 P2P 네트워킹 (자동 피어 발견)
-- [ ] DHT (Distributed Hash Table) 구현
-- [ ] Bootstrap 노드 시스템
-- [ ] mDNS 로컬 피어 발견
+- [x] DHT (Distributed Hash Table) 구현
+- [x] Bootstrap 노드 시스템
+- [x] mDNS 로컬 피어 발견
 - [ ] UPnP 자동 포트 포워딩
 - [ ] NAT 통과 (STUN/TURN)
 - [ ] 자동 피어 발견 및 연결
@@ -80,9 +80,9 @@
 ## 현재 진행 상황
 - ✅ Phase 1-5, 7-8 완료!
 - ✅ Phase 4: 기본 P2P 네트워킹 완료!
-- 🚧 Phase 4.5: 고급 P2P 네트워킹 (자동 피어 발견) - 다음 목표
+- 🚧 Phase 4.5: 고급 P2P 네트워킹 (자동 피어 발견) - DHT 구현 완료!
 - 🚀 기본적인 Eastsea 클론이 성공적으로 구현됨
-- 다음 단계: 자동 피어 발견 시스템 또는 스마트 컨트랙트 시스템 구현
+- 다음 단계: Bootstrap 노드 시스템 또는 mDNS 로컬 피어 발견 구현
 
 ## 구현된 주요 기능
 ✅ **블록체인 코어**
@@ -105,6 +105,7 @@
 - 메시지 직렬화/역직렬화
 - 체크섬 기반 메시지 무결성 검증
 - 피어 연결 상태 관리
+- DHT (Distributed Hash Table) 기반 자동 피어 발견
 
 ✅ **JSON-RPC API**
 - 블록 높이 조회

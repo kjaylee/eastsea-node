@@ -283,8 +283,9 @@ pub const P2PNode = struct {
     pub fn handlePeer(self: *P2PNode, peer: *PeerConnection) !void {
         while (peer.connected and self.running) {
             if (peer.receiveMessage()) |message| {
-                defer message.deinit();
-                try self.processMessage(peer, &message);
+                var mut_message = message;
+                defer mut_message.deinit();
+                try self.processMessage(peer, &mut_message);
             } else |err| {
                 if (err == error.WouldBlock) {
                     std.time.sleep(1000000); // 1ms

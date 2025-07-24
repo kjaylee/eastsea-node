@@ -65,6 +65,68 @@ pub fn build(b: *std.Build) void {
     const p2p_test_run_step = b.step("run-p2p", "Run the P2P network test");
     p2p_test_run_step.dependOn(&p2p_test_run_cmd.step);
 
+    // DHT Test executable
+    const dht_test_exe = b.addExecutable(.{
+        .name = "dht-test",
+        .root_source_file = b.path("src/dht_test.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+
+    b.installArtifact(dht_test_exe);
+
+    // DHT Test run command
+    const dht_test_run_cmd = b.addRunArtifact(dht_test_exe);
+    dht_test_run_cmd.step.dependOn(b.getInstallStep());
+
+    if (b.args) |args| {
+        dht_test_run_cmd.addArgs(args);
+    }
+
+    const dht_test_run_step = b.step("run-dht", "Run the DHT test");
+    dht_test_run_step.dependOn(&dht_test_run_cmd.step);
+
+    // Bootstrap Test executable
+    const bootstrap_test_exe = b.addExecutable(.{
+        .name = "bootstrap-test",
+        .root_source_file = b.path("src/bootstrap_test.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+
+    b.installArtifact(bootstrap_test_exe);
+
+    // Bootstrap Test run command
+    const bootstrap_test_run_cmd = b.addRunArtifact(bootstrap_test_exe);
+    bootstrap_test_run_cmd.step.dependOn(b.getInstallStep());
+
+    if (b.args) |args| {
+        bootstrap_test_run_cmd.addArgs(args);
+    }
+
+    const bootstrap_test_run_step = b.step("run-bootstrap", "Run the Bootstrap test");
+    bootstrap_test_run_step.dependOn(&bootstrap_test_run_cmd.step);
+    // mDNS Test executable
+    const mdns_test_exe = b.addExecutable(.{
+        .name = "mdns-test",
+        .root_source_file = b.path("src/mdns_test.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+
+    b.installArtifact(mdns_test_exe);
+
+    // mDNS Test run command
+    const mdns_test_run_cmd = b.addRunArtifact(mdns_test_exe);
+    mdns_test_run_cmd.step.dependOn(b.getInstallStep());
+
+    if (b.args) |args| {
+        mdns_test_run_cmd.addArgs(args);
+    }
+
+    const mdns_test_run_step = b.step("run-mdns", "Run the mDNS test");
+    mdns_test_run_step.dependOn(&mdns_test_run_cmd.step);
+
 
     // Tests
     const unit_tests = b.addTest(.{
