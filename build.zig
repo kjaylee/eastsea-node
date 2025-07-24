@@ -169,6 +169,90 @@ pub fn build(b: *std.Build) void {
     const upnp_test_run_step = b.step("run-upnp", "Run the UPnP test");
     upnp_test_run_step.dependOn(&upnp_test_run_cmd.step);
 
+    // Programs/Smart Contracts Test executable (temporarily disabled due to fmt issues)
+    // const programs_test_exe = b.addExecutable(.{
+    //     .name = "programs-test",
+    //     .root_source_file = b.path("src/programs_test.zig"),
+    //     .target = target,
+    //     .optimize = optimize,
+    // });
+
+    // b.installArtifact(programs_test_exe);
+
+    // // Programs Test run command
+    // const programs_test_run_cmd = b.addRunArtifact(programs_test_exe);
+    // programs_test_run_cmd.step.dependOn(b.getInstallStep());
+
+    // if (b.args) |args| {
+    //     programs_test_run_cmd.addArgs(args);
+    // }
+
+    // const programs_test_run_step = b.step("run-programs", "Run the Smart Contracts (Programs) test");
+    // programs_test_run_step.dependOn(&programs_test_run_cmd.step);
+
+    // STUN/NAT Traversal Test executable (temporarily disabled due to fmt issues)
+    // const stun_test_exe = b.addExecutable(.{
+    //     .name = "stun-test",
+    //     .root_source_file = b.path("src/stun_test_simple.zig"),
+    //     .target = target,
+    //     .optimize = optimize,
+    // });
+
+    // b.installArtifact(stun_test_exe);
+
+    // // STUN Test run command
+    // const stun_test_run_cmd = b.addRunArtifact(stun_test_exe);
+    // stun_test_run_cmd.step.dependOn(b.getInstallStep());
+
+    // if (b.args) |args| {
+    //     stun_test_run_cmd.addArgs(args);
+    // }
+
+    // const stun_test_run_step = b.step("run-stun", "Run the STUN/NAT Traversal test");
+    // stun_test_run_step.dependOn(&stun_test_run_cmd.step);
+
+    // Port Scanner Test executable (temporarily disabled due to compilation issues)
+    // const port_scanner_test_exe = b.addExecutable(.{
+    //     .name = "port-scanner-test",
+    //     .root_source_file = b.path("src/port_scanner_test.zig"),
+    //     .target = target,
+    //     .optimize = optimize,
+    // });
+
+    // b.installArtifact(port_scanner_test_exe);
+
+    // // Port Scanner Test run command
+    // const port_scanner_test_run_cmd = b.addRunArtifact(port_scanner_test_exe);
+    // port_scanner_test_run_cmd.step.dependOn(b.getInstallStep());
+
+    // if (b.args) |args| {
+    //     port_scanner_test_run_cmd.addArgs(args);
+    // }
+
+    // const port_scanner_test_run_step = b.step("run-port-scan", "Run the Port Scanner test");
+    // port_scanner_test_run_step.dependOn(&port_scanner_test_run_cmd.step);
+
+    // Broadcast Test executable (temporarily disabled due to compilation issues)
+    // const broadcast_test_exe = b.addExecutable(.{
+    //     .name = "broadcast-test",
+    //     .root_source_file = b.path("src/broadcast_test.zig"),
+    //     .target = target,
+    //     .optimize = optimize,
+    // });
+
+    // b.installArtifact(broadcast_test_exe);
+
+    // // Broadcast Test run command
+    // const broadcast_test_run_cmd = b.addRunArtifact(broadcast_test_exe);
+    // broadcast_test_run_cmd.step.dependOn(b.getInstallStep());
+
+    // if (b.args) |args| {
+    //     broadcast_test_run_cmd.addArgs(args);
+    // }
+
+    // const broadcast_test_run_step = b.step("run-broadcast", "Run the Broadcast test");
+    // broadcast_test_run_step.dependOn(&broadcast_test_run_cmd.step);
+
 
     // Tests
     const unit_tests = b.addTest(.{

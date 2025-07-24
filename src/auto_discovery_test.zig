@@ -55,7 +55,7 @@ pub fn main() !void {
     print("=====================================\n", .{});
     print("Port: {d}\n", .{port});
     if (bootstrap_peer) |peer| {
-        print("Bootstrap peer: {any}\n", .{peer});
+        print("Bootstrap peer: {}\n", .{peer});
     } else {
         print("Mode: Bootstrap server\n", .{});
     }
