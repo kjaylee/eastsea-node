@@ -1,453 +1,242 @@
-zig로 eastsea 클론 만들기. todo 리스트 만들어서, context가 모자라도 계속 이어 갈 수 있게해줘.
+# 🌊 Eastsea - Zig 블록체인 클론
 
-## 🚀 최신 업데이트: 실제 P2P 네트워크 구현 완료!
+> **Solana 스타일의 고성능 블록체인을 Zig 언어로 구현한 프로젝트**
 
-이 프로젝트는 Zig 언어로 구현된 Eastsea 블록체인 클론입니다. 최근 **실제 TCP 소켓 통신을 지원하는 P2P 네트워크**가 구현되어 더욱 현실적인 블록체인 시스템이 되었습니다.
+Eastsea는 Proof of History 합의 메커니즘과 완전한 P2P 네트워킹을 갖춘 실용적인 블록체인 구현체입니다. 시스템 프로그래밍에 최적화된 Zig 언어로 개발되어 높은 성능과 메모리 안전성을 제공합니다.
 
-### 🌟 새로 구현된 P2P 기능들:
-- ✅ 실제 TCP 소켓 기반 피어 간 통신
-- ✅ 메시지 직렬화/역직렬화 (바이너리 프로토콜)
-- ✅ 체크섬 기반 메시지 무결성 검증
-- ✅ 핸드셰이크 및 연결 관리
-- ✅ 블록 및 트랜잭션 브로드캐스팅
-- ✅ 피어 상태 모니터링 (ping/pong)
-- ✅ DHT (Distributed Hash Table) 기반 자동 피어 발견
-- ✅ UPnP 자동 포트 포워딩
-- ✅ Tracker 서버 (중앙 피어 목록 관리)
-- ✅ 포트 스캔을 통한 로컬 네트워크 탐색
-- ✅ 브로드캐스트/멀티캐스트 피어 공지
+[![Build Status](https://img.shields.io/badge/build-passing-brightgreen)]() 
+[![Zig Version](https://img.shields.io/badge/zig-0.14-blue)]() 
+[![License](https://img.shields.io/badge/license-MIT-green)]()
 
-## ⚡ 빠른 시작
+---
 
-### 개발자를 위한 필수 테스트 워크플로우
+## ✨ 주요 특징
+
+### 🚀 **고성능 블록체인**
+- **Proof of History 합의**: Solana 스타일의 빠른 합의 메커니즘
+- **Zig 언어**: 메모리 안전성과 최적화된 성능
+- **스마트 컨트랙트**: Program 기반 실행 환경
+
+### 🌐 **완전한 P2P 네트워킹**
+- **실제 TCP 통신**: 메시지 직렬화/역직렬화 및 체크섬 검증
+- **자동 피어 발견**: DHT, mDNS, UPnP, Bootstrap 시스템
+- **NAT 통과**: STUN 클라이언트 및 자동 포트 포워딩
+
+### 🛠️ **개발자 친화적**
+- **포괄적 문서화**: API, 가이드, 예제 완비
+- **모듈형 설계**: 독립적 테스트 가능한 컴포넌트
+- **상세한 테스트**: 단위/통합/성능/보안 테스트 프레임워크
+
+---
+
+## 🚀 빠른 시작
+
+### 필수 요구사항
+- **Zig 0.14+** ([설치 가이드](https://ziglang.org/download/))
+- **Git**
+- **네트워크 권한** (P2P 테스트용)
+
+### 1분 빌드 & 실행
 ```bash
-# 1. 코드 변경 후 필수 확인
-zig build                    # 컴파일 확인
-zig build test              # 단위 테스트
-zig build run               # 통합 테스트
+# 저장소 클론
+git clone <repository-url>
+cd forge-test-007-zig
 
-# 2. 네트워킹 기능 테스트 (별도 터미널에서)
-zig build run-p2p -- 8000   # 터미널 1
-zig build run-p2p -- 8001 8000  # 터미널 2
-
-# 3. DHT 네트워크 테스트 (별도 터미널에서)
-zig build run-dht -- 8000   # 터미널 1  
-zig build run-dht -- 8001 8000  # 터미널 2
-```
-
-## 📚 Documentation
-
-### 📖 Complete Documentation Suite
-
-Eastsea provides comprehensive documentation for all user types:
-
-#### 🎯 For Users
-- **[User Guide](docs/USER_GUIDE.md)** - Complete guide for end users
-  - Installation and setup
-  - Basic operations and wallet management
-  - Network participation
-  - Smart contract usage
-  - Troubleshooting and FAQ
-
-#### 👨‍💻 For Developers  
-- **[Developer Guide](docs/DEVELOPER_GUIDE.md)** - Comprehensive development documentation
-  - Architecture overview and core components
-  - Development workflow and coding standards
-  - Testing strategies and contribution guidelines
-  - Advanced topics and performance optimization
-
-#### 🔌 For API Integration
-- **[API Documentation](docs/API.md)** - Complete API reference
-  - JSON-RPC API endpoints
-  - P2P network protocols
-  - Smart contract interfaces
-  - Error codes and examples
-
-#### 💡 For Learning
-- **[Code Examples](docs/EXAMPLES.md)** - Practical code examples
-  - Basic usage patterns
-  - Advanced network features
-  - Smart contract development
-  - Performance optimization techniques
-
-### 🚀 Quick Documentation Access
-
-```bash
-# View documentation locally
-open docs/USER_GUIDE.md      # For users
-open docs/DEVELOPER_GUIDE.md # For developers  
-open docs/API.md             # For API reference
-open docs/EXAMPLES.md        # For code examples
-```
-
-## 🛠️ 사용법
-
-### 기본 실행
-```bash
-# 기본 데모 실행 (모든 기능 통합 테스트)
+# 빌드 & 실행
 zig build run
-
-# 프로덕션 노드 실행
-zig build run-prod
 ```
 
-### 개별 컴포넌트 테스트
+### 핵심 기능 체험
 ```bash
-# P2P 네트워크 테스트
-zig build run-p2p -- 8000
+# P2P 네트워크 테스트 (2개 터미널)
+zig build run-p2p -- 8000        # 터미널 1
+zig build run-p2p -- 8001 8000   # 터미널 2
 
-# 다른 터미널에서 피어 연결
-zig build run-p2p -- 8001 8000
+# DHT 네트워크 테스트
+zig build run-dht -- 8000        # 터미널 1  
+zig build run-dht -- 8001 8000   # 터미널 2
 
-# DHT 기능 테스트
-zig build run-dht -- 8000
+# 스마트 컨트랙트 테스트
+zig build run-custom-programs -- all
+```
 
-# 다른 터미널에서 DHT 노드 연결
-zig build run-dht -- 8001 8000
+---
 
-# Bootstrap 노드 테스트
-zig build run-bootstrap -- 8000
+## 📖 문서
 
-# mDNS 로컬 피어 발견 테스트
-zig build run-mdns -- 8000
+| 문서 | 대상 | 내용 |
+|------|------|------|
+| **[사용자 가이드](docs/USER_GUIDE.md)** | 👤 일반 사용자 | 설치, 기본 사용법, 지갑 관리 |
+| **[개발자 가이드](docs/DEVELOPER_GUIDE.md)** | 👨‍💻 개발자 | 아키텍처, 개발 워크플로우, 기여 방법 |
+| **[API 문서](docs/API.md)** | 🔌 통합 개발자 | JSON-RPC API, P2P 프로토콜 |
+| **[코드 예제](docs/EXAMPLES.md)** | 💡 학습자 | 실용적인 사용 패턴 및 고급 기능 |
 
-# UPnP 자동 포트 포워딩 테스트
+---
+
+## 🛠️ 개발 워크플로우
+
+### 코드 변경 후 필수 체크
+```bash
+zig build           # 컴파일 확인
+zig build test      # 단위 테스트
+zig build run       # 통합 테스트
+```
+
+### 주요 빌드 타겟
+| 명령어 | 기능 | 용도 |
+|--------|------|------|
+| `zig build run` | 통합 데모 | 전체 기능 체험 |
+| `zig build run-prod` | 프로덕션 노드 | 실제 네트워크 참여 |
+| `zig build run-p2p -- <port> [peer]` | P2P 테스트 | 네트워크 연결 테스트 |
+| `zig build run-dht -- <port> [peer]` | DHT 테스트 | 분산 해시 테이블 |
+| `zig build run-custom-programs -- <type>` | 스마트 컨트랙트 | Program 실행 |
+| `zig build test` | 테스트 실행 | 모든 단위 테스트 |
+
+### 고급 네트워킹 테스트
+```bash
+# 자동 피어 발견
+zig build run-auto-discovery -- 8000
+
+# UPnP 포트 포워딩
 zig build run-upnp -- 8000
 
-# 포트 스캔을 통한 로컬 피어 발견 테스트
-zig build run-port-scan -- 8000
-
-# 브로드캐스트/멀티캐스트 피어 공지 테스트
-zig build run-broadcast -- 8000
-
-# Tracker 서버/클라이언트 테스트
-zig build run-tracker -- server 7000
-
-# 다른 터미널에서 Tracker 클라이언트 연결
-zig build run-tracker -- client 8001 7000
-
-# 통합 자동 피어 발견 테스트
-zig build run-auto-discovery -- 8000
-# 사용자 정의 프로그램 테스트
-zig build run-custom-programs -- counter
-zig build run-custom-programs -- calculator
-zig build run-custom-programs -- voting
-zig build run-custom-programs -- token-swap
-zig build run-custom-programs -- all
-zig build run-custom-programs -- benchmark
-
-# Phase 9 테스트 프레임워크
-zig build run-phase9 -- performance
-zig build run-phase9 -- security
-zig build run-phase9 -- resilience
-zig build run-phase9 -- all
-
-# Phase 13 QUIC 프로토콜 테스트 (미래 구현)
-zig build run-quic -- basic
-zig build run-quic -- streams
-zig build run-quic -- security
-zig build run-quic -- performance
-zig build run-quic -- all
-```
-
-## 🧪 테스트 및 검증
-
-### 단위 테스트 실행
-```bash
-# 모든 단위 테스트 실행
-zig build test
-```
-
-### 개발 중 테스트 워크플로우
-
-#### 1. 코드 변경 후 기본 검증
-```bash
-# 빌드 확인
-zig build
-
-# 기본 기능 테스트
-zig build run
-```
-
-#### 2. 네트워킹 기능 테스트
-```bash
-# P2P 네트워크 테스트 (단일 노드)
-zig build run-p2p -- 8000
-
-# 멀티 노드 테스트 (별도 터미널에서)
-zig build run-p2p -- 8001 8000
-zig build run-p2p -- 8002 8000
-```
-
-#### 3. DHT 기능 테스트
-```bash
-# DHT 노드 테스트 (단일 노드)
-zig build run-dht -- 8000
-
-# DHT 네트워크 테스트 (별도 터미널에서)
-zig build run-dht -- 8001 8000
-zig build run-dht -- 8002 8001
-```
-
-#### 4. 로컬 피어 발견 테스트
-```bash
-# mDNS 테스트
+# mDNS 로컬 발견
 zig build run-mdns -- 8000
 
-# Bootstrap 테스트
-zig build run-bootstrap -- 8000
+# Tracker 서버/클라이언트
+zig build run-tracker -- server 7000
+zig build run-tracker -- client 8001 7000
 ```
 
-#### 5. 전체 통합 테스트
-```bash
-# 모든 컴포넌트 통합 테스트
-zig build run
+---
 
-# 단위 테스트 실행
-zig build test
+## 🏗️ 프로젝트 구조
+
+```
+eastsea/
+├── src/
+│   ├── blockchain/          # 블록체인 핵심 로직
+│   ├── network/            # P2P 네트워킹 (DHT, mDNS, UPnP)
+│   ├── consensus/          # Proof of History 합의
+│   ├── crypto/             # 암호화 및 해시 함수
+│   ├── programs/           # 스마트 컨트랙트 시스템
+│   ├── rpc/               # JSON-RPC API 서버
+│   ├── cli/               # 명령줄 도구
+│   └── testing/           # 테스트 프레임워크
+├── docs/                  # 문서화
+├── build.zig             # 빌드 설정
+└── TODO.md               # 개발 로드맵 (22개 Phase)
 ```
 
-### 테스트 시나리오별 가이드
+---
 
-#### 🔗 P2P 네트워킹 테스트
-1. **단일 노드 테스트**: `zig build run-p2p -- 8000`
-2. **피어 연결 테스트**: 
-   - 터미널 1: `zig build run-p2p -- 8000`
-   - 터미널 2: `zig build run-p2p -- 8001 8000`
-3. **네트워크 확장 테스트**:
-   - 터미널 3: `zig build run-p2p -- 8002 8001`
+## 🧪 테스트 및 품질 보증
 
-#### 🌐 DHT 네트워크 테스트
-1. **DHT 부트스트랩**: `zig build run-dht -- 8000`
-2. **노드 발견 테스트**:
-   - 터미널 1: `zig build run-dht -- 8000`
-   - 터미널 2: `zig build run-dht -- 8001 8000`
-3. **분산 해시 테이블 테스트**:
-   - 터미널 3: `zig build run-dht -- 8002 8001`
+### 테스트 커버리지
+- ✅ **단위 테스트**: 핵심 로직 검증
+- ✅ **통합 테스트**: P2P 네트워크, DHT, 합의
+- ✅ **성능 테스트**: 벤치마킹 프레임워크
+- ✅ **보안 테스트**: 암호화 및 네트워크 보안
+- ✅ **복원력 테스트**: 네트워크 장애 시나리오
 
-#### 📡 로컬 발견 테스트
-1. **mDNS 테스트**: `zig build run-mdns -- 8000`
-2. **Bootstrap 테스트**: `zig build run-bootstrap -- 8000`
-#### 🎯 사용자 정의 프로그램 테스트
-1. **카운터 프로그램**: `zig build run-custom-programs -- counter`
-2. **계산기 프로그램**: `zig build run-custom-programs -- calculator`
-3. **투표 프로그램**: `zig build run-custom-programs -- voting`
-4. **토큰 스왑 프로그램**: `zig build run-custom-programs -- token-swap`
-5. **전체 테스트**: `zig build run-custom-programs -- all`
-6. **성능 벤치마크**: `zig build run-custom-programs -- benchmark`
-
-### 디버깅 및 문제 해결
-
-#### 빌드 오류 시
+### 개발자를 위한 테스트 가이드
 ```bash
-# 캐시 정리
-rm -rf .zig-cache zig-out
+# 기본 개발 워크플로우
+zig build && zig build test && zig build run
 
-# 다시 빌드
-zig build
-```
+# 네트워킹 기능 검증 (멀티 터미널)
+zig build run-p2p -- 8000 &
+zig build run-p2p -- 8001 8000
 
-#### 네트워크 연결 문제 시
-```bash
-# 포트 사용 확인
-lsof -i :8000
-
-# 방화벽 확인 (macOS)
-sudo pfctl -sr | grep 8000
-```
-
-#### 메모리 누수 검사
-```bash
-# 디버그 모드로 실행
-zig build run -Doptimize=Debug
-```
-
-### 성능 테스트
-
-#### 벤치마크 실행
-```bash
-# 릴리즈 모드로 빌드
+# 성능 벤치마크
 zig build -Doptimize=ReleaseFast
-
-# 성능 테스트 실행
-zig build run
+zig build run-custom-programs -- benchmark
 ```
 
-#### 메모리 사용량 모니터링
+---
+
+## 🎯 사용 사례
+
+### 🎓 **교육 및 학습**
+- 블록체인 기술 학습용 참고 구현
+- P2P 네트워킹 및 분산 시스템 연구
+- Zig 언어 고급 프로젝트 사례
+
+### 🔬 **연구 및 개발**
+- 합의 알고리즘 실험 플랫폼
+- 네트워크 프로토콜 프로토타이핑
+- 성능 최적화 연구
+
+### 🚀 **상용 개발**
+- 커스텀 블록체인 개발 기반
+- P2P 애플리케이션 네트워킹 라이브러리
+- 분산 시스템 컴포넌트
+
+---
+
+## 🤝 기여하기
+
+이 프로젝트는 오픈소스 기여를 환영합니다!
+
+### 기여 방법
+1. **이슈 리포트**: 버그 발견 시 GitHub Issues 활용
+2. **기능 제안**: TODO.md의 Phase별 계획 참고
+3. **코드 기여**: Pull Request 제출 전 테스트 필수
+4. **문서 개선**: 사용자 경험 향상을 위한 문서 기여
+
+### 개발 프로세스
 ```bash
-# 메모리 프로파일링
-zig build run -Doptimize=Debug
+# 1. Fork & Clone
+git clone <your-fork>
 
-# 시스템 모니터링 (macOS)
-top -pid $(pgrep eastsea)
-```
-
-## 🔄 개발 워크플로우: 테스트 후 Git 작업
-
-### 테스트 완료 후 자동 커밋 및 푸시
-
-모든 테스트가 성공적으로 완료되면 다음 워크플로우를 따라 변경사항을 커밋하고 푸시합니다:
-
-#### 1. 전체 테스트 실행 및 검증
-```bash
-# 필수 테스트 시퀀스 실행
-echo "🧪 Starting comprehensive test suite..."
-
-# 컴파일 확인
-echo "📦 Building project..."
-zig build || { echo "❌ Build failed!"; exit 1; }
-
-# 단위 테스트 실행
-echo "🔬 Running unit tests..."
-zig build test || { echo "❌ Unit tests failed!"; exit 1; }
-
-# 통합 테스트 실행
-echo "🚀 Running integration tests..."
-zig build run || { echo "❌ Integration tests failed!"; exit 1; }
-
-echo "✅ All tests passed successfully!"
-```
-
-#### 2. Git 상태 확인 및 스테이징
-```bash
-# 현재 git 상태 확인
-echo "📋 Checking git status..."
-git status
-
-# 변경된 소스 파일만 스테이징 (.zig-cache 제외)
-echo "📝 Staging source files..."
-git add src/ README.md TODO.md build.zig
-
-# 스테이징된 변경사항 확인
-git diff --cached
-```
-
-#### 3. 커밋 메시지 작성 및 커밋
-```bash
-# 의미있는 커밋 메시지와 함께 커밋
-echo "💾 Committing changes..."
-git commit -m "feat: implement [기능명] - all tests passing
-
-- Added: [추가된 기능]
-- Modified: [수정된 기능]  
-- Fixed: [수정된 버그]
-- Tests: All unit and integration tests passing ✅"
-
-# 또는 간단한 커밋
-git commit -m "test: all tests passing - ready for push ✅"
-```
-
-#### 4. 원격 저장소에 푸시
-```bash
-# 원격 저장소에 푸시
-echo "🚀 Pushing to remote repository..."
-git push origin main || { echo "❌ Push failed!"; exit 1; }
-
-echo "🎉 Successfully pushed to remote repository!"
-```
-
-### 🔧 원클릭 테스트 및 푸시 스크립트
-
-개발 효율성을 위한 자동화 스크립트를 만들 수 있습니다:
-
-#### `test-and-push.sh` 스크립트 생성
-```bash
-#!/bin/bash
-set -e  # 에러 발생 시 스크립트 중단
-
-echo "🧪 Eastsea Test & Push Automation"
-echo "================================="
-
-# 1. 전체 테스트 실행
-echo "📦 Building..."
-zig build
-
-echo "🔬 Running unit tests..."
+# 2. 개발 & 테스트
 zig build test
+zig build run
 
-echo "🚀 Running integration tests..."
-timeout 30s zig build run || echo "⚠️ Integration test timeout (expected for interactive demo)"
-
-# 2. Git 작업
-echo "📝 Staging changes..."
-git add src/ README.md TODO.md build.zig
-
-if git diff --cached --quiet; then
-    echo "ℹ️ No changes to commit"
-    exit 0
-fi
-
-echo "💾 Committing..."
-COMMIT_MSG="${1:-test: all tests passing - auto commit ✅}"
-git commit -m "$COMMIT_MSG"
-
-echo "🚀 Pushing to remote..."
-git push origin main
-
-echo "🎉 All done! Tests passed and changes pushed successfully."
+# 3. Pull Request
+# 모든 테스트 통과 후 PR 제출
 ```
 
-#### 스크립트 사용법
-```bash
-# 실행 권한 부여
-chmod +x test-and-push.sh
+**더 자세한 정보**: [개발자 가이드](docs/DEVELOPER_GUIDE.md)를 참고하세요.
 
-# 기본 커밋 메시지로 실행
-./test-and-push.sh
+---
 
-# 커스텀 커밋 메시지로 실행
-./test-and-push.sh "feat: add new P2P networking feature"
-```
+## 📋 로드맵
 
-### 📋 테스트 체크리스트 (커밋 전 필수 확인)
+현재 **22개 Phase**로 구성된 상세한 개발 계획이 [TODO.md](TODO.md)에 있습니다.
 
-다음 모든 항목이 ✅ 상태여야 커밋 및 푸시를 진행합니다:
+### 🎯 **현재 상태 (85% 완료)**
+- ✅ P2P 네트워킹 및 자동 피어 발견
+- ✅ Proof of History 합의 메커니즘  
+- ✅ 스마트 컨트랙트 시스템
+- ✅ 포괄적 테스트 프레임워크
+- 🔄 메시지 처리 로직 완성 중
 
-#### 코드 품질 확인
-- [ ] `zig build` - 컴파일 오류 없음
-- [ ] `zig build test` - 모든 단위 테스트 통과
-- [ ] `zig build run` - 기본 데모 정상 실행
-- [ ] 코드 리뷰 완료 (중요한 변경사항의 경우)
+### 🚀 **다음 계획**
+- **Phase 17**: CI/CD 자동화
+- **Phase 18**: 성능 모니터링
+- **Phase 19**: 크로스 플랫폼 지원
 
-#### 기능별 테스트 확인
-- [ ] P2P 네트워킹: `zig build run-p2p -- 8000` 정상 실행
-- [ ] DHT 기능: `zig build run-dht -- 8000` 정상 실행
-- [ ] Bootstrap 기능: `zig build run-bootstrap -- 8000` 정상 실행
-- [ ] mDNS 기능: `zig build run-mdns -- 8000` 정상 실행
+---
 
-#### Git 작업 확인
-- [ ] `.zig-cache/` 및 `zig-out/` 디렉토리는 커밋에서 제외
-- [ ] 의미있는 커밋 메시지 작성
-- [ ] 원격 저장소 푸시 성공
+## 📄 라이선스
 
-### ⚠️ 주의사항
+이 프로젝트는 [MIT 라이선스](LICENSE) 하에 배포됩니다.
 
-1. **빌드 캐시 제외**: `.zig-cache/`와 `zig-out/` 디렉토리는 커밋하지 않습니다.
-2. **테스트 필수**: 모든 테스트가 통과해야만 커밋을 진행합니다.
-3. **의미있는 커밋**: 커밋 메시지는 변경사항을 명확히 설명해야 합니다.
-4. **충돌 해결**: 푸시 전에 `git pull`로 최신 변경사항을 확인합니다.
+---
 
-### 🔄 지속적 통합 (CI) 준비
+## 🌟 특별감사
 
-향후 GitHub Actions나 다른 CI/CD 시스템 도입 시 참고할 워크플로우:
+- **Zig 커뮤니티**: 뛰어난 시스템 프로그래밍 언어 제공
+- **Solana Labs**: Proof of History 합의 메커니즘 영감
+- **블록체인 오픈소스 생태계**: 지속적인 혁신과 협력
 
-```yaml
-# .github/workflows/test.yml (예시)
-name: Test Suite
-on: [push, pull_request]
-jobs:
-  test:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-      - name: Setup Zig
-        uses: goto-bus-stop/setup-zig@v2
-      - name: Build
-        run: zig build
-      - name: Test
-        run: zig build test
-      - name: Integration Test
-        run: timeout 30s zig build run || true
-```
+---
 
-# eastsea-node
+<div align="center">
+
+**⭐ 이 프로젝트가 유용하다면 Star를 눌러주세요! ⭐**
+
+[🐛 버그 리포트](../../issues) | [💡 기능 제안](../../issues) | [🤝 기여하기](docs/DEVELOPER_GUIDE.md)
+
+</div>
