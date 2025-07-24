@@ -83,6 +83,13 @@ zig build run-tracker -- client 8001 7000
 
 # 통합 자동 피어 발견 테스트
 zig build run-auto-discovery -- 8000
+# 사용자 정의 프로그램 테스트
+zig build run-custom-programs -- counter
+zig build run-custom-programs -- calculator
+zig build run-custom-programs -- voting
+zig build run-custom-programs -- token-swap
+zig build run-custom-programs -- all
+zig build run-custom-programs -- benchmark
 ```
 
 ## 🧪 테스트 및 검증
@@ -163,6 +170,13 @@ zig build test
 #### 📡 로컬 발견 테스트
 1. **mDNS 테스트**: `zig build run-mdns -- 8000`
 2. **Bootstrap 테스트**: `zig build run-bootstrap -- 8000`
+#### 🎯 사용자 정의 프로그램 테스트
+1. **카운터 프로그램**: `zig build run-custom-programs -- counter`
+2. **계산기 프로그램**: `zig build run-custom-programs -- calculator`
+3. **투표 프로그램**: `zig build run-custom-programs -- voting`
+4. **토큰 스왑 프로그램**: `zig build run-custom-programs -- token-swap`
+5. **전체 테스트**: `zig build run-custom-programs -- all`
+6. **성능 벤치마크**: `zig build run-custom-programs -- benchmark`
 
 ### 디버깅 및 문제 해결
 

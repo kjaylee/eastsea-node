@@ -189,6 +189,26 @@ pub fn build(b: *std.Build) void {
 
     const programs_test_run_step = b.step("run-programs", "Run the Smart Contracts (Programs) test");
     programs_test_run_step.dependOn(&programs_test_run_cmd.step);
+    // Custom Programs Test executable
+    const custom_programs_test_exe = b.addExecutable(.{
+        .name = "custom-programs-test",
+        .root_source_file = b.path("src/custom_programs_test.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+
+    b.installArtifact(custom_programs_test_exe);
+
+    // Custom Programs Test run command
+    const custom_programs_test_run_cmd = b.addRunArtifact(custom_programs_test_exe);
+    custom_programs_test_run_cmd.step.dependOn(b.getInstallStep());
+
+    if (b.args) |args| {
+        custom_programs_test_run_cmd.addArgs(args);
+    }
+
+    const custom_programs_test_run_step = b.step("run-custom-programs", "Run the Custom Programs test");
+    custom_programs_test_run_step.dependOn(&custom_programs_test_run_cmd.step);
 
     // STUN/NAT Traversal Test executable
     const stun_test_exe = b.addExecutable(.{

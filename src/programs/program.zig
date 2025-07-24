@@ -247,12 +247,14 @@ pub const ProgramExecutor = struct {
     allocator: std.mem.Allocator,
     programs: std.AutoHashMap([32]u8, Program),
     accounts: std.AutoHashMap([32]u8, AccountData),
+    custom_programs: ?*@import("custom_program.zig").CustomProgramRegistry,
     
     pub fn init(allocator: std.mem.Allocator) ProgramExecutor {
         return ProgramExecutor{
             .allocator = allocator,
             .programs = std.AutoHashMap([32]u8, Program).init(allocator),
             .accounts = std.AutoHashMap([32]u8, AccountData).init(allocator),
+            .custom_programs = null,
         };
     }
     
@@ -291,32 +293,49 @@ pub const ProgramExecutor = struct {
         try self.programs.put(program.id, program);
     }
     
+    /// 사용자 정의 프로그램 레지스트리 설정
+    pub fn setCustomProgramRegistry(self: *ProgramExecutor, registry: *@import("custom_program.zig").CustomProgramRegistry) void {
+        self.custom_programs = registry;
+    }
+    
     /// 계정 생성
     pub fn createAccount(self: *ProgramExecutor, pubkey: [32]u8, size: usize, owner: [32]u8) !void {
         const account_data = try AccountData.init(self.allocator, size, owner);
         try self.accounts.put(pubkey, account_data);
     }
     
-    /// 명령어 실행
+    /// 명령어 실행 (사용자 정의 프로그램 지원 포함)
     pub fn executeInstruction(self: *ProgramExecutor, instruction: *const Instruction) !ProgramResult {
-        const program = self.programs.get(instruction.program_id) orelse {
-            var result = ProgramResult.init(self.allocator);
-            try result.setError("Program not found");
-            return result;
-        };
+        // 먼저 기본 프로그램에서 찾기
+        if (self.programs.get(instruction.program_id)) |program| {
+            return try program.execute(self.allocator, instruction, &self.accounts);
+        }
         
-        return try program.execute(self.allocator, instruction, &self.accounts);
+        // 사용자 정의 프로그램에서 찾기
+        if (self.custom_programs) |registry| {
+            if (registry.getProgram(instruction.program_id)) |_| {
+                return try registry.executeProgram(instruction.program_id, instruction, &self.accounts);
+            }
+        }
+        
+        // 프로그램을 찾지 못한 경우
+        var result = ProgramResult.init(self.allocator);
+        try result.setError("Program not found");
+        return result;
     }
     
-    /// 상태 출력
+    /// 상태 출력 (사용자 정의 프로그램 포함)
     pub fn printStatus(self: *const ProgramExecutor) void {
         std.debug.print("\n📊 Program Executor Status\n", .{});
         std.debug.print("==========================\n", .{});
-        std.debug.print("Programs: {d}\n", .{self.programs.count()});
+        std.debug.print("System Programs: {d}\n", .{self.programs.count()});
+        
+        const custom_count = if (self.custom_programs) |registry| registry.programs.count() else 0;
+        std.debug.print("Custom Programs: {d}\n", .{custom_count});
         std.debug.print("Accounts: {d}\n", .{self.accounts.count()});
         
-        // 등록된 프로그램 목록
-        std.debug.print("\n📋 Registered Programs:\n", .{});
+        // 등록된 시스템 프로그램 목록
+        std.debug.print("\n📋 System Programs:\n", .{});
         var program_iterator = self.programs.iterator();
         while (program_iterator.next()) |entry| {
             const program = entry.value_ptr;
@@ -326,6 +345,23 @@ pub const ProgramExecutor = struct {
             }
             std.debug.print("...)\n", .{});
         }
+        
+        // 등록된 사용자 정의 프로그램 목록
+        if (self.custom_programs) |registry| {
+            if (registry.programs.count() > 0) {
+                std.debug.print("\n📋 Custom Programs:\n", .{});
+                var custom_iterator = registry.programs.iterator();
+                while (custom_iterator.next()) |entry| {
+                    const program = entry.value_ptr;
+                    std.debug.print("  - {s} (ID: ", .{program.name});
+                    for (program.id[0..4]) |byte| {
+                        std.debug.print("{x:0>2}", .{byte});
+                    }
+                    std.debug.print("...)\n", .{});
+                }
+            }
+        }
+        
         std.debug.print("\n", .{});
     }
 };

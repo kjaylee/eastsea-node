@@ -51,7 +51,7 @@
 - [✅] 기본 프로그램 인터페이스 - 구현 완료, 테스트 통과
 - [✅] 프로그램 실행 환경 - 구현 완료, 테스트 통과
 - [✅] 시스템 프로그램들 - 기본 구현 완료, 테스트 통과
-- [ ] 사용자 정의 프로그램 지원
+- [✅] 사용자 정의 프로그램 지원 - 구현 완료, 테스트 통과
 
 ## Phase 7: RPC API
 - [x] JSON-RPC 서버
@@ -97,6 +97,13 @@
 - [ ] `zig build run-port-scan -- 8000` - 포트 스캔 테스트
 - [ ] `zig build run-broadcast -- 8000` - 브로드캐스트 공지 테스트
 - [ ] `zig build run-auto-discovery -- 8000` - 통합 자동 발견 테스트
+#### 사용자 정의 프로그램 기능 변경 시
+- [ ] `zig build run-custom-programs -- counter` - 카운터 프로그램 테스트
+- [ ] `zig build run-custom-programs -- calculator` - 계산기 프로그램 테스트
+- [ ] `zig build run-custom-programs -- voting` - 투표 프로그램 테스트
+- [ ] `zig build run-custom-programs -- token-swap` - 토큰 스왑 프로그램 테스트
+- [ ] `zig build run-custom-programs -- all` - 모든 사용자 정의 프로그램 테스트
+- [ ] `zig build run-custom-programs -- benchmark` - 성능 벤치마크
 
 #### 블록체인 코어 기능 변경 시
 - [ ] 블록 생성 및 검증 테스트
@@ -120,6 +127,7 @@
   - [ ] `zig build run-auto-discovery`
   - [ ] `zig build run-port-scan`
   - [ ] `zig build run-broadcast`
+  - [ ] `zig build run-custom-programs`
 - [ ] 단위 테스트 통과: `zig build test`
 - [ ] 메모리 안전성 확인
 - [ ] 다양한 시나리오에서 안정성 테스트
@@ -235,6 +243,11 @@ zig build run
 - 토큰 프로그램 (민트, 계정, 전송) ✅
 - Hello World 예제 프로그램 ✅
 - 프로그램 결과 로깅 및 오류 처리 ✅
+✅ **사용자 정의 프로그램 (Custom Programs)**
+- 동적 프로그램 등록 및 실행 시스템 ✅
+- 카운터, 계산기, 투표, 토큰 스왑 예제 프로그램 ✅
+- 프로그램 레지스트리 및 관리 시스템 ✅
+- 사용자 정의 프로그램 성능 벤치마킹 ✅
 
 ✅ **테스트 및 최적화 프레임워크 (Phase 9)**
 - 성능 벤치마킹 프레임워크 ✅
