@@ -282,7 +282,7 @@ pub const MDNSMessage = struct {
 
 pub const MDNSDiscovery = struct {
     allocator: std.mem.Allocator,
-    socket: ?net.Socket,
+    socket: ?std.net.Server,
     local_address: []const u8,
     local_port: u16,
     service_instance: []const u8,
@@ -363,32 +363,18 @@ pub const MDNSDiscovery = struct {
     }
 
     pub fn start(self: *MDNSDiscovery) !void {
-        // Create UDP socket for multicast
-        self.socket = try net.Socket.create(.ipv4, .udp);
-        
-        // Set socket options for multicast
-        try self.socket.?.setReuseAddress(true);
-        
-        // Bind to multicast address
-        const bind_address = try net.Address.parseIp4("0.0.0.0", MDNS_PORT);
-        try self.socket.?.bind(bind_address);
-        
-        // Join multicast group
-        try self.joinMulticastGroup();
-        
+        // mDNS functionality temporarily disabled due to Zig 0.14 compatibility
+        // TODO: Implement UDP multicast socket support for Zig 0.14
         self.running = true;
         
-        std.debug.print("🔍 mDNS Discovery started on {s}:{}\n", .{ self.local_address, self.local_port });
+        std.debug.print("🔍 mDNS Discovery started (limited mode) on {s}:{}\n", .{ self.local_address, self.local_port });
         std.debug.print("📡 Service instance: {s}\n", .{self.service_instance});
-        
-        // Start discovery process
-        try self.announceService();
-        try self.queryForServices();
+        std.debug.print("⚠️  UDP multicast temporarily disabled for Zig 0.14 compatibility\n", .{});
     }
 
     pub fn stop(self: *MDNSDiscovery) void {
-        if (self.socket) |socket| {
-            socket.close();
+        if (self.socket) |*socket| {
+            socket.deinit();
             self.socket = null;
         }
         self.running = false;
@@ -396,11 +382,9 @@ pub const MDNSDiscovery = struct {
     }
 
     fn joinMulticastGroup(self: *MDNSDiscovery) !void {
-        if (self.socket == null) return MDNSError.SocketCreationFailed;
-        
-        // This is a simplified implementation
-        // In a real implementation, you would use setsockopt with IP_ADD_MEMBERSHIP
-        std.debug.print("📡 Joined mDNS multicast group\n", .{});
+        // mDNS multicast temporarily disabled for Zig 0.14 compatibility
+        _ = self;
+        std.debug.print("📡 mDNS multicast group joining disabled (Zig 0.14 compatibility)\n", .{});
     }
 
     pub fn announceService(self: *MDNSDiscovery) !void {
@@ -497,36 +481,16 @@ pub const MDNSDiscovery = struct {
     }
 
     fn sendMessage(self: *MDNSDiscovery, message: *const MDNSMessage) !void {
-        if (self.socket == null) return MDNSError.SocketCreationFailed;
-        
-        const serialized = try message.serialize();
-        defer self.allocator.free(serialized);
-        
-        const multicast_address = try net.Address.parseIp4(MDNS_MULTICAST_ADDRESS, MDNS_PORT);
-        _ = try self.socket.?.sendTo(serialized, multicast_address);
-        
-        std.debug.print("📤 Sent mDNS message ({} bytes)\n", .{serialized.len});
+        // mDNS sending temporarily disabled for Zig 0.14 compatibility
+        _ = self;
+        _ = message;
+        std.debug.print("📤 mDNS message sending disabled (Zig 0.14 compatibility)\n", .{});
     }
 
     pub fn receiveMessages(self: *MDNSDiscovery) !void {
-        if (self.socket == null) return MDNSError.SocketCreationFailed;
-        
-        var buffer: [1024]u8 = undefined;
-        
-        while (self.running) {
-            if (self.socket.?.receive(&buffer)) |received| {
-                self.processReceivedMessage(buffer[0..received]) catch |err| {
-                    std.debug.print("⚠️  Error processing mDNS message: {}\n", .{err});
-                };
-            } else |err| {
-                if (err == error.WouldBlock) {
-                    std.time.sleep(100_000_000); // 100ms
-                    continue;
-                }
-                std.debug.print("❌ Error receiving mDNS message: {}\n", .{err});
-                break;
-            }
-        }
+        // mDNS receiving temporarily disabled for Zig 0.14 compatibility
+        _ = self;
+        std.debug.print("📥 mDNS message receiving disabled (Zig 0.14 compatibility)\n", .{});
     }
 
     fn processReceivedMessage(self: *MDNSDiscovery, buffer: []const u8) !void {

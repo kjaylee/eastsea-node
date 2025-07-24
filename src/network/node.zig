@@ -272,7 +272,13 @@ pub const Node = struct {
                 
                 // Find nodes close to our ID to populate routing table
                 const close_nodes = try dht_instance.findNode(dht_instance.local_node.id);
-                defer close_nodes.deinit();
+                defer {
+                    // Clean up close_nodes
+                    for (close_nodes.items) |*close_node| {
+                        close_node.deinit(self.allocator);
+                    }
+                    close_nodes.deinit();
+                }
                 
                 // Try to connect to discovered nodes
                 for (close_nodes.items) |discovered_node| {
@@ -287,7 +293,7 @@ pub const Node = struct {
                 std.debug.print("⚠️  No bootstrap nodes available for DHT\n", .{});
             }
             
-            // Clean up bootstrap nodes
+            // Clean up bootstrap nodes (these are the original ones, not the ones in DHT)
             for (bootstrap_nodes.items) |*bootstrap_node| {
                 bootstrap_node.deinit(self.allocator);
             }

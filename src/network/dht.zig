@@ -103,9 +103,11 @@ pub const KBucket = struct {
             }
         }
 
-        // If bucket is not full, add the node
+        // If bucket is not full, add the node (create a copy with duplicated address)
         if (self.nodes.items.len < DHT_K) {
-            try self.nodes.append(new_node);
+            var node_copy = new_node;
+            node_copy.address = try self.allocator.dupe(u8, new_node.address);
+            try self.nodes.append(node_copy);
             return true;
         }
 
@@ -114,7 +116,9 @@ pub const KBucket = struct {
             if (!existing_node.isAlive()) {
                 // Replace stale node
                 existing_node.deinit(self.allocator);
-                self.nodes.items[i] = new_node;
+                var node_copy = new_node;
+                node_copy.address = try self.allocator.dupe(u8, new_node.address);
+                self.nodes.items[i] = node_copy;
                 return true;
             }
         }
@@ -142,6 +146,7 @@ pub const KBucket = struct {
         
         for (self.nodes.items) |dht_node| {
             var node_copy = dht_node;
+            node_copy.address = try self.allocator.dupe(u8, dht_node.address);
             _ = node_copy.calculateDistance(target_id);
             try nodes_with_distance.append(node_copy);
         }
@@ -158,6 +163,11 @@ pub const KBucket = struct {
         const max_count = @min(count, nodes_with_distance.items.len);
         for (nodes_with_distance.items[0..max_count]) |dht_node| {
             try result.append(dht_node);
+        }
+        
+        // Clean up temporary nodes
+        for (nodes_with_distance.items) |*dht_node| {
+            dht_node.deinit(self.allocator);
         }
         
         return result;
@@ -222,11 +232,18 @@ pub const DHTRoutingTable = struct {
         
         // Collect nodes from the target bucket and neighboring buckets
         var collected_nodes = std.ArrayList(DHTNode).init(self.allocator);
-        defer collected_nodes.deinit();
+        defer {
+            // Clean up collected nodes
+            for (collected_nodes.items) |*dht_node| {
+                dht_node.deinit(self.allocator);
+            }
+            collected_nodes.deinit();
+        }
         
         // Add nodes from target bucket
         for (self.buckets[target_bucket_index].nodes.items) |dht_node| {
             var node_copy = dht_node;
+            node_copy.address = try self.allocator.dupe(u8, dht_node.address);
             _ = node_copy.calculateDistance(target_id);
             try collected_nodes.append(node_copy);
         }
@@ -240,6 +257,7 @@ pub const DHTRoutingTable = struct {
             if (lower_bucket >= 0) {
                 for (self.buckets[@intCast(lower_bucket)].nodes.items) |dht_node| {
                     var node_copy = dht_node;
+                    node_copy.address = try self.allocator.dupe(u8, dht_node.address);
                     _ = node_copy.calculateDistance(target_id);
                     try collected_nodes.append(node_copy);
                 }
@@ -248,6 +266,7 @@ pub const DHTRoutingTable = struct {
             if (upper_bucket < DHT_ID_BITS) {
                 for (self.buckets[@intCast(upper_bucket)].nodes.items) |dht_node| {
                     var node_copy = dht_node;
+                    node_copy.address = try self.allocator.dupe(u8, dht_node.address);
                     _ = node_copy.calculateDistance(target_id);
                     try collected_nodes.append(node_copy);
                 }
@@ -264,10 +283,12 @@ pub const DHTRoutingTable = struct {
             }
         }.lessThan);
         
-        // Return the closest nodes
+        // Return the closest nodes (create new copies for the result)
         const max_count = @min(count, collected_nodes.items.len);
         for (collected_nodes.items[0..max_count]) |dht_node| {
-            try result.append(dht_node);
+            var result_node = dht_node;
+            result_node.address = try self.allocator.dupe(u8, dht_node.address);
+            try result.append(result_node);
         }
         
         return result;
@@ -439,7 +460,14 @@ pub const DHT = struct {
         }
         
         // Perform initial node lookup to populate routing table
-        _ = try self.findNode(self.local_node.id);
+        const close_nodes = try self.findNode(self.local_node.id);
+        defer {
+            // Clean up close_nodes
+            for (close_nodes.items) |*close_node| {
+                close_node.deinit(self.allocator);
+            }
+            close_nodes.deinit();
+        }
         
         std.debug.print("✅ DHT bootstrap complete. Routing table has {} nodes\n", .{self.routing_table.getTotalNodes()});
     }

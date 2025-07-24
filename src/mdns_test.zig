@@ -152,6 +152,9 @@ fn showFinalStatus(p2p_node: *p2p.P2PNode, bootstrap_client: *bootstrap.Bootstra
 }
 
 fn simulatePeerDiscovery(mdns_discovery: *mdns.MDNSDiscovery, bootstrap_client: *bootstrap.BootstrapClient, p2p_node: *p2p.P2PNode) !void {
+    // Suppress unused parameter warnings
+    _ = mdns_discovery;
+    
     // Simulate discovering peers on different ports
     const mock_ports = [_]u16{ 8001, 8002, 8003 };
     
