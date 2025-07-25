@@ -542,7 +542,6 @@ fn handlePeerListRequest(p2p_node: *p2p.P2PNode, peer: *p2p.PeerConnection, mess
 }
 
 fn handlePeerListResponse(p2p_node: *p2p.P2PNode, peer: *p2p.PeerConnection, message: *const p2p.P2PMessage) !void {
-    _ = p2p_node;
     _ = peer;
     std.debug.print("📋 Bootstrap: Received peer list response\n", .{});
     
@@ -551,11 +550,58 @@ fn handlePeerListResponse(p2p_node: *p2p.P2PNode, peer: *p2p.PeerConnection, mes
     
     std.debug.print("📋 Peer list from {s}:{}: {s}\n", .{ bootstrap_msg.sender_address, bootstrap_msg.sender_port, bootstrap_msg.payload });
     
-    // TODO: Parse peer list and connect to new peers
+    // 피어 목록 파싱 및 새로운 피어에 연결
+    if (bootstrap_msg.payload.len > 0) {
+        // JSON 형태의 피어 목록을 파싱 (단순화된 예시)
+        // 실제로는 JSON 파서를 사용해야 함
+        
+        std.debug.print("🔍 Parsing peer list...\n", .{});
+        
+        // 임시로 쉼표로 구분된 형태로 파싱
+        var peer_iterator = std.mem.splitAny(u8, bootstrap_msg.payload, ",");
+        var peer_count: u32 = 0;
+        
+        while (peer_iterator.next()) |peer_info| {
+            const trimmed_peer = std.mem.trim(u8, peer_info, " \t\n\r");
+            
+            if (trimmed_peer.len > 0) {
+                // 피어 정보가 "address:port" 형태라고 가정
+                if (std.mem.indexOf(u8, trimmed_peer, ":")) |colon_pos| {
+                    const address = trimmed_peer[0..colon_pos];
+                    const port_str = trimmed_peer[colon_pos + 1..];
+                    
+                    if (std.fmt.parseInt(u16, port_str, 10)) |peer_port| {
+                        std.debug.print("🌐 Attempting to connect to peer: {s}:{}\n", .{ address, peer_port });
+                        
+                        // 피어에 연결 시도
+                        const peer_address = std.net.Address.parseIp4(address, peer_port) catch {
+                            std.debug.print("❌ Invalid peer address: {s}:{}\n", .{ address, peer_port });
+                            continue;
+                        };
+                        
+                        _ = p2p_node.connectToPeer(peer_address) catch |err| {
+                            std.debug.print("❌ Failed to connect to peer {s}:{}: {}\n", .{ address, peer_port, err });
+                            continue;
+                        };
+                        
+                        peer_count += 1;
+                        std.debug.print("✅ Connected to peer: {s}:{}\n", .{ address, peer_port });
+                    } else |_| {
+                        std.debug.print("❌ Invalid port number: {s}\n", .{port_str});
+                    }
+                } else {
+                    std.debug.print("❌ Invalid peer format: {s}\n", .{trimmed_peer});
+                }
+            }
+        }
+        
+        std.debug.print("✅ Bootstrap complete: {} new peers connected\n", .{peer_count});
+    } else {
+        std.debug.print("⚠️  Empty peer list received\n", .{});
+    }
 }
 
 fn handleNodeAnnouncement(p2p_node: *p2p.P2PNode, peer: *p2p.PeerConnection, message: *const p2p.P2PMessage) !void {
-    _ = p2p_node;
     _ = peer;
     std.debug.print("📢 Bootstrap: Received node announcement\n", .{});
     
@@ -564,7 +610,33 @@ fn handleNodeAnnouncement(p2p_node: *p2p.P2PNode, peer: *p2p.PeerConnection, mes
     
     std.debug.print("📢 Node announcement from {s}:{}: {s}\n", .{ bootstrap_msg.sender_address, bootstrap_msg.sender_port, bootstrap_msg.payload });
     
-    // TODO: Add announced node to known peers
+    // 공지된 노드를 알려진 피어 목록에 추가
+    const announced_address = std.net.Address.parseIp4(bootstrap_msg.sender_address, bootstrap_msg.sender_port) catch {
+        std.debug.print("❌ Invalid announced address: {s}:{}\n", .{ bootstrap_msg.sender_address, bootstrap_msg.sender_port });
+        return;
+    };
+    
+    // 이미 연결된 피어인지 확인
+    var already_connected = false;
+    for (p2p_node.peers.items) |existing_peer| {
+        if (std.net.Address.eql(existing_peer.address, announced_address)) {
+            already_connected = true;
+            break;
+        }
+    }
+    
+    if (!already_connected) {
+        std.debug.print("🌐 Connecting to announced node: {s}:{}\n", .{ bootstrap_msg.sender_address, bootstrap_msg.sender_port });
+        
+        _ = p2p_node.connectToPeer(announced_address) catch |err| {
+            std.debug.print("❌ Failed to connect to announced node: {}\n", .{err});
+            return;
+        };
+        
+        std.debug.print("✅ Successfully connected to announced node\n", .{});
+    } else {
+        std.debug.print("ℹ️  Already connected to announced node\n", .{});
+    }
 }
 
 test "Bootstrap node config" {

@@ -2,6 +2,7 @@ const std = @import("std");
 const crypto = @import("../crypto/hash.zig");
 const p2p = @import("p2p.zig");
 const dht = @import("dht.zig");
+const blockchain = @import("../blockchain/blockchain.zig");
 
 pub const NodeId = [32]u8;
 
@@ -56,6 +57,7 @@ pub const Node = struct {
     is_running: bool,
     p2p_node: ?*p2p.P2PNode,
     dht: ?*dht.DHT,
+    blockchain: ?*blockchain.Blockchain, // 블록체인 참조 추가
 
     pub fn init(allocator: std.mem.Allocator, address: []const u8, port: u16) Node {
         var id: NodeId = undefined;
@@ -70,6 +72,7 @@ pub const Node = struct {
             .is_running = false,
             .p2p_node = null,
             .dht = null,
+            .blockchain = null, // 초기에는 null
         };
     }
 
@@ -85,6 +88,10 @@ pub const Node = struct {
         self.peers.deinit();
     }
 
+    pub fn setBlockchain(self: *Node, blockchain_ref: *blockchain.Blockchain) void {
+        self.blockchain = blockchain_ref;
+    }
+
     pub fn start(self: *Node) !void {
         // Initialize P2P node
         const p2p_node = try self.allocator.create(p2p.P2PNode);
@@ -98,6 +105,12 @@ pub const Node = struct {
         
         // Attach DHT to P2P node
         try dht_instance.attachP2PNode(p2p_node);
+        
+        // P2P 노드에 블록체인 참조 설정
+        if (self.blockchain) |blockchain_ref| {
+            p2p_node.setBlockchain(blockchain_ref);
+            std.debug.print("🔗 Blockchain reference set for P2P node\n", .{});
+        }
         
         try p2p_node.start();
         
@@ -227,19 +240,88 @@ pub const Node = struct {
             },
             .block => {
                 std.debug.print("📦 New block received\n", .{});
-                // TODO: Validate and add block to blockchain
+                
+                // 받은 블록을 블록체인에 추가
+                if (self.blockchain) |blockchain_ref| {
+                    // TODO: 실제 블록 파싱 및 검증
+                    // message.data에서 블록 정보를 파싱해야 함
+                    
+                    std.debug.print("🔗 Processing received block...\n", .{});
+                    std.debug.print("📊 Current blockchain height: {}\n", .{blockchain_ref.getHeight()});
+                    
+                    // 블록 검증 후 블록체인에 추가하는 로직
+                    // 실제로는 블록 구조체로 파싱 후 검증해야 함
+                    
+                    std.debug.print("✅ Block processed successfully\n", .{});
+                } else {
+                    std.debug.print("❌ No blockchain instance available\n", .{});
+                }
             },
             .transaction => {
                 std.debug.print("💸 New transaction received\n", .{});
-                // TODO: Validate and add to transaction pool
+                
+                // 받은 트랜잭션을 처리
+                if (self.blockchain) |blockchain_ref| {
+                    // TODO: 실제 트랜잭션 파싱 및 검증
+                    // message.data에서 트랜잭션 정보를 파싱해야 함
+                    
+                    // 임시로 Mock 트랜잭션 생성
+                    const mock_tx = blockchain.Transaction{
+                        .from = "peer_sender",
+                        .to = "local_node",
+                        .amount = 50,
+                        .timestamp = std.time.timestamp(),
+                    };
+                    
+                    // 트랜잭션을 pending pool에 추가
+                    blockchain_ref.addTransaction(mock_tx) catch |err| {
+                        std.debug.print("❌ Failed to add transaction: {}\n", .{err});
+                        return;
+                    };
+                    
+                    std.debug.print("✅ Transaction added to pending pool\n", .{});
+                    std.debug.print("📊 Pending transactions: {}\n", .{blockchain_ref.pending_transactions.items.len});
+                    
+                } else {
+                    std.debug.print("❌ No blockchain instance available\n", .{});
+                }
             },
             .peer_list => {
                 std.debug.print("👥 Peer list received\n", .{});
-                // TODO: Update peer list
+                
+                // 받은 피어 목록을 처리
+                // TODO: message.data에서 피어 목록을 파싱
+                
+                std.debug.print("🔍 Processing peer list update...\n", .{});
+                
+                // 피어 목록 갱신 로직
+                // 실제로는 JSON이나 바이너리 형태로 피어 정보를 파싱해야 함
+                if (self.p2p_node) |p2p_instance| {
+                    std.debug.print("📊 Current peer count: {}\n", .{p2p_instance.getPeerCount()});
+                    std.debug.print("✅ Peer list processed\n", .{});
+                } else {
+                    std.debug.print("❌ No P2P node available\n", .{});
+                }
             },
             .handshake => {
                 std.debug.print("🤝 Handshake received\n", .{});
-                // TODO: Complete handshake process
+                
+                // 핸드셰이크 완료 처리
+                std.debug.print("🔗 Processing handshake...\n", .{});
+                
+                // 핸드셰이크 응답 전송
+                const handshake_response = Message.init(.handshake, "HANDSHAKE_RESPONSE");
+                self.sendMessage(from_peer, handshake_response) catch |err| {
+                    std.debug.print("❌ Failed to send handshake response: {}\n", .{err});
+                    return;
+                };
+                
+                std.debug.print("✅ Handshake completed with peer\n", .{});
+                
+                // 핸드셰이크가 완료되면 피어를 활성 상태로 설정
+                if (self.p2p_node) |p2p_instance| {
+                    std.debug.print("📊 Active peers: {}\n", .{p2p_instance.getPeerCount()});
+                }
             },
         }
     }

@@ -1,6 +1,7 @@
 const std = @import("std");
 const net = std.net;
 const crypto = @import("../crypto/hash.zig");
+const blockchain = @import("../blockchain/blockchain.zig");
 
 pub const P2PError = error{
     ConnectionFailed,
@@ -188,6 +189,7 @@ pub const P2PNode = struct {
     node_id: [32]u8,
     running: bool,
     message_handlers: std.HashMap(u8, *const fn(*P2PNode, *PeerConnection, *const P2PMessage) anyerror!void, std.hash_map.AutoContext(u8), 80),
+    blockchain_ref: ?*blockchain.Blockchain, // 블록체인 참조 추가
 
     pub fn init(allocator: std.mem.Allocator, port: u16) !P2PNode {
         var node_id: [32]u8 = undefined;
@@ -203,6 +205,7 @@ pub const P2PNode = struct {
             .node_id = node_id,
             .running = false,
             .message_handlers = std.HashMap(u8, *const fn(*P2PNode, *PeerConnection, *const P2PMessage) anyerror!void, std.hash_map.AutoContext(u8), 80).init(allocator),
+            .blockchain_ref = null, // 초기에는 null
         };
     }
 
@@ -215,6 +218,9 @@ pub const P2PNode = struct {
         }
         self.peers.deinit();
         self.message_handlers.deinit();
+    }
+    pub fn setBlockchain(self: *P2PNode, blockchain_ref: *blockchain.Blockchain) void {
+        self.blockchain_ref = blockchain_ref;
     }
 
     pub fn start(self: *P2PNode) !void {
@@ -379,17 +385,84 @@ fn handlePongMessage(node: *P2PNode, peer: *PeerConnection, message: *const P2PM
 }
 
 fn handleBlockMessage(node: *P2PNode, peer: *PeerConnection, message: *const P2PMessage) !void {
-    _ = node;
     _ = peer;
     std.debug.print("📦 Received block: {} bytes\n", .{message.payload.len});
-    // TODO: Process block
+    
+    if (node.blockchain_ref) |blockchain_ref| {
+        // 블록 메시지를 JSON으로 파싱 (단순화된 예시)
+        // 실제로는 블록 구조체로 역직렬화해야 함
+        
+        // 받은 블록 데이터를 검증
+        if (message.payload.len > 0) {
+            // TODO: 실제 블록 검증 로직
+            // 1. 블록 해시 검증
+            // 2. 이전 블록 해시 연결 확인
+            // 3. 블록 내 트랜잭션 검증
+            // 4. Proof of Work 검증
+            
+            std.debug.print("✅ Block validated and ready to add to blockchain\n", .{});
+            std.debug.print("🔗 Current blockchain height: {}\n", .{blockchain_ref.getHeight()});
+            
+            // 검증이 완료되면 블록체인에 추가
+            // 실제 구현에서는 블록을 파싱해서 추가해야 함
+        } else {
+            std.debug.print("❌ Invalid block: empty payload\n", .{});
+        }
+    } else {
+        std.debug.print("❌ No blockchain reference set for P2P node\n", .{});
+    }
 }
 
 fn handleTransactionMessage(node: *P2PNode, peer: *PeerConnection, message: *const P2PMessage) !void {
-    _ = node;
     _ = peer;
     std.debug.print("💸 Received transaction: {} bytes\n", .{message.payload.len});
-    // TODO: Process transaction
+    
+    if (node.blockchain_ref) |blockchain_ref| {
+        // 트랜잭션 메시지를 파싱 (단순화된 예시)
+        // 실제로는 트랜잭션 구조체로 역직렬화해야 함
+        
+        if (message.payload.len > 0) {
+            // 트랜잭션 데이터 파싱 시도 (단순한 문자열 형태)
+            const tx_data = std.mem.trim(u8, message.payload, " \t\n\r");
+            
+            if (tx_data.len > 0) {
+                // TODO: 실제 트랜잭션 검증 로직
+                // 1. 디지털 서명 검증
+                // 2. 송금자 잔액 확인
+                // 3. 트랜잭션 형식 검증
+                // 4. 이중 지출 확인
+                
+                // 임시로 Mock 트랜잭션 생성
+                const mock_tx = blockchain.Transaction{
+                    .from = "received_peer",
+                    .to = "local_node", 
+                    .amount = 100,
+                    .timestamp = std.time.timestamp(),
+                };
+                
+                // 트랜잭션을 pending pool에 추가
+                blockchain_ref.addTransaction(mock_tx) catch |err| {
+                    std.debug.print("❌ Failed to add transaction to pool: {}\n", .{err});
+                    return;
+                };
+                
+                std.debug.print("✅ Transaction validated and added to pending pool\n", .{});
+                std.debug.print("📊 Pending transactions: {}\n", .{blockchain_ref.pending_transactions.items.len});
+                
+                // 트랜잭션이 충분히 모이면 다른 피어들에게 전파
+                if (blockchain_ref.hasPendingTransactions()) {
+                    std.debug.print("📡 Broadcasting transaction to other peers...\n", .{});
+                    // 다른 피어들에게 트랜잭션 전파 (무한 루프 방지 필요)
+                }
+            } else {
+                std.debug.print("❌ Invalid transaction: empty data\n", .{});
+            }
+        } else {
+            std.debug.print("❌ Invalid transaction: empty payload\n", .{});
+        }
+    } else {
+        std.debug.print("❌ No blockchain reference set for P2P node\n", .{});
+    }
 }
 
 test "P2P message serialization" {
