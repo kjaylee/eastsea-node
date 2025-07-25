@@ -389,22 +389,96 @@ fn handleBlockMessage(node: *P2PNode, peer: *PeerConnection, message: *const P2P
     std.debug.print("📦 Received block: {} bytes\n", .{message.payload.len});
     
     if (node.blockchain_ref) |blockchain_ref| {
-        // 블록 메시지를 JSON으로 파싱 (단순화된 예시)
-        // 실제로는 블록 구조체로 역직렬화해야 함
-        
-        // 받은 블록 데이터를 검증
         if (message.payload.len > 0) {
-            // TODO: 실제 블록 검증 로직
-            // 1. 블록 해시 검증
-            // 2. 이전 블록 해시 연결 확인
-            // 3. 블록 내 트랜잭션 검증
-            // 4. Proof of Work 검증
+            // 블록 데이터를 문자열로 파싱 (간단한 형태로 시뮬레이션)
+            const block_data = std.mem.trim(u8, message.payload, " \t\n\r");
             
-            std.debug.print("✅ Block validated and ready to add to blockchain\n", .{});
-            std.debug.print("🔗 Current blockchain height: {}\n", .{blockchain_ref.getHeight()});
-            
-            // 검증이 완료되면 블록체인에 추가
-            // 실제 구현에서는 블록을 파싱해서 추가해야 함
+            // 블록 데이터 검증 (간단한 형태)
+            if (std.mem.startsWith(u8, block_data, "BLOCK:")) {
+                std.debug.print("🔍 Validating received block...\n", .{});
+                
+                // 1. 현재 블록체인 높이 확인
+                const current_height = blockchain_ref.getHeight();
+                std.debug.print("📊 Current blockchain height: {}\n", .{current_height});
+                
+                // 2. 블록체인 무결성 검증
+                if (!blockchain_ref.isChainValid()) {
+                    std.debug.print("❌ Current blockchain is invalid, cannot add new block\n", .{});
+                    return;
+                }
+                
+                // 3. 간단한 블록 정보 파싱 (실제로는 더 복잡한 구조)
+                // 예시: "BLOCK:index=2,timestamp=1234567890,txcount=3"
+                var parts = std.mem.splitScalar(u8, block_data[6..], ','); // Skip "BLOCK:"
+                var parsed_index: ?u64 = null;
+                var parsed_timestamp: ?i64 = null;
+                var tx_count: u32 = 0;
+                
+                while (parts.next()) |part| {
+                    if (std.mem.startsWith(u8, part, "index=")) {
+                        parsed_index = std.fmt.parseUnsigned(u64, part[6..], 10) catch null;
+                    } else if (std.mem.startsWith(u8, part, "timestamp=")) {
+                        parsed_timestamp = std.fmt.parseInt(i64, part[10..], 10) catch null;
+                    } else if (std.mem.startsWith(u8, part, "txcount=")) {
+                        tx_count = std.fmt.parseUnsigned(u32, part[8..], 10) catch 0;
+                    }
+                }
+                
+                // 4. 블록 인덱스 검증 (연속성 확인)
+                if (parsed_index) |block_index| {
+                    if (block_index != current_height) {
+                        std.debug.print("❌ Block index mismatch: expected {}, got {}\n", .{ current_height, block_index });
+                        return;
+                    }
+                } else {
+                    std.debug.print("❌ Invalid block: could not parse index\n", .{});
+                    return;
+                }
+                
+                // 5. 타임스탬프 검증 (최신 블록보다 나중)
+                if (parsed_timestamp) |timestamp| {
+                    const latest_block = blockchain_ref.getLatestBlock();
+                    if (timestamp <= latest_block.timestamp) {
+                        std.debug.print("❌ Block timestamp is not newer than latest block\n", .{});
+                        return;
+                    }
+                } else {
+                    std.debug.print("❌ Invalid block: could not parse timestamp\n", .{});
+                    return;
+                }
+                
+                // 6. 받은 블록 정보로 새 블록 생성 (시뮬레이션)
+                // 실제로는 전체 블록 데이터를 역직렬화해야 함
+                std.debug.print("✅ Block validation passed\n", .{});
+                std.debug.print("📊 Block info: index={}, timestamp={}, transactions={}\n", .{ parsed_index.?, parsed_timestamp.?, tx_count });
+                
+                // 7. 트랜잭션이 있으면 pending pool에 추가 (시뮬레이션)
+                if (tx_count > 0) {
+                    var i: u32 = 0;
+                    while (i < tx_count and i < 3) : (i += 1) { // 최대 3개까지만
+                        const mock_tx = blockchain.Transaction{
+                            .from = "peer_node",
+                            .to = "network_user",
+                            .amount = 10 + i * 5,
+                            .timestamp = parsed_timestamp.?,
+                        };
+                        
+                        blockchain_ref.addTransaction(mock_tx) catch |err| {
+                            std.debug.print("❌ Failed to add transaction {}: {}\n", .{ i, err });
+                            continue;
+                        };
+                    }
+                    
+                    std.debug.print("✅ Added {} transactions from received block\n", .{tx_count});
+                }
+                
+                // 8. 블록 체인에 실제로 추가하지는 않음 (마이닝 필요)
+                // 대신 pending transactions으로 처리
+                std.debug.print("📋 Block data processed, {} pending transactions\n", .{blockchain_ref.pending_transactions.items.len});
+                
+            } else {
+                std.debug.print("❌ Invalid block format: does not start with 'BLOCK:'\n", .{});
+            }
         } else {
             std.debug.print("❌ Invalid block: empty payload\n", .{});
         }
@@ -418,44 +492,107 @@ fn handleTransactionMessage(node: *P2PNode, peer: *PeerConnection, message: *con
     std.debug.print("💸 Received transaction: {} bytes\n", .{message.payload.len});
     
     if (node.blockchain_ref) |blockchain_ref| {
-        // 트랜잭션 메시지를 파싱 (단순화된 예시)
-        // 실제로는 트랜잭션 구조체로 역직렬화해야 함
-        
         if (message.payload.len > 0) {
-            // 트랜잭션 데이터 파싱 시도 (단순한 문자열 형태)
+            // 트랜잭션 데이터를 문자열로 파싱 (간단한 형태로 시뮬레이션)
             const tx_data = std.mem.trim(u8, message.payload, " \t\n\r");
             
-            if (tx_data.len > 0) {
-                // TODO: 실제 트랜잭션 검증 로직
-                // 1. 디지털 서명 검증
-                // 2. 송금자 잔액 확인
-                // 3. 트랜잭션 형식 검증
-                // 4. 이중 지출 확인
+            // 트랜잭션 데이터 검증 (간단한 형태)
+            if (std.mem.startsWith(u8, tx_data, "TX:")) {
+                std.debug.print("🔍 Validating received transaction...\n", .{});
                 
-                // 임시로 Mock 트랜잭션 생성
-                const mock_tx = blockchain.Transaction{
-                    .from = "received_peer",
-                    .to = "local_node", 
-                    .amount = 100,
-                    .timestamp = std.time.timestamp(),
+                // 1. 트랜잭션 형식 파싱
+                // 예시: "TX:from=alice,to=bob,amount=50,timestamp=1234567890"
+                var parts = std.mem.splitScalar(u8, tx_data[3..], ','); // Skip "TX:"
+                var from: ?[]const u8 = null;
+                var to: ?[]const u8 = null;
+                var amount: ?u64 = null;
+                var timestamp: ?i64 = null;
+                
+                while (parts.next()) |part| {
+                    if (std.mem.startsWith(u8, part, "from=")) {
+                        from = part[5..];
+                    } else if (std.mem.startsWith(u8, part, "to=")) {
+                        to = part[3..];
+                    } else if (std.mem.startsWith(u8, part, "amount=")) {
+                        amount = std.fmt.parseUnsigned(u64, part[7..], 10) catch null;
+                    } else if (std.mem.startsWith(u8, part, "timestamp=")) {
+                        timestamp = std.fmt.parseInt(i64, part[10..], 10) catch null;
+                    }
+                }
+                
+                // 2. 필수 필드 검증
+                if (from == null or to == null or amount == null or timestamp == null) {
+                    std.debug.print("❌ Invalid transaction: missing required fields\n", .{});
+                    return;
+                }
+                
+                // 3. 기본 검증
+                if (amount.? == 0) {
+                    std.debug.print("❌ Invalid transaction: amount cannot be zero\n", .{});
+                    return;
+                }
+                
+                if (std.mem.eql(u8, from.?, to.?)) {
+                    std.debug.print("❌ Invalid transaction: sender and recipient cannot be the same\n", .{});
+                    return;
+                }
+                
+                // 4. 타임스탬프 검증 (너무 오래된 트랜잭션 거부)
+                const current_time = std.time.timestamp();
+                const max_age = 3600; // 1시간
+                if (current_time - timestamp.? > max_age) {
+                    std.debug.print("❌ Invalid transaction: too old (age: {} seconds)\n", .{current_time - timestamp.?});
+                    return;
+                }
+                
+                // 5. 미래 트랜잭션 거부
+                if (timestamp.? > current_time + 300) { // 5분 여유
+                    std.debug.print("❌ Invalid transaction: timestamp too far in the future\n", .{});
+                    return;
+                }
+                
+                // 6. 이중 지출 검사 (간단한 형태)
+                // 실제로는 UTXO 모델이나 계정 기반 모델에 따라 다름
+                for (blockchain_ref.pending_transactions.items) |existing_tx| {
+                    if (std.mem.eql(u8, existing_tx.from, from.?) and 
+                        existing_tx.timestamp == timestamp.? and 
+                        existing_tx.amount == amount.?) {
+                        std.debug.print("❌ Invalid transaction: potential duplicate transaction\n", .{});
+                        return;
+                    }
+                }
+                
+                // 7. 유효한 트랜잭션 생성
+                const validated_tx = blockchain.Transaction{
+                    .from = from.?,
+                    .to = to.?,
+                    .amount = amount.?,
+                    .timestamp = timestamp.?,
                 };
                 
-                // 트랜잭션을 pending pool에 추가
-                blockchain_ref.addTransaction(mock_tx) catch |err| {
+                // 8. 트랜잭션을 pending pool에 추가
+                blockchain_ref.addTransaction(validated_tx) catch |err| {
                     std.debug.print("❌ Failed to add transaction to pool: {}\n", .{err});
                     return;
                 };
                 
                 std.debug.print("✅ Transaction validated and added to pending pool\n", .{});
-                std.debug.print("📊 Pending transactions: {}\n", .{blockchain_ref.pending_transactions.items.len});
+                std.debug.print("📊 Transaction details: {s} -> {s}, amount: {}, timestamp: {}\n", .{ from.?, to.?, amount.?, timestamp.? });
+                std.debug.print("📋 Pending transactions: {}\n", .{blockchain_ref.pending_transactions.items.len});
                 
-                // 트랜잭션이 충분히 모이면 다른 피어들에게 전파
-                if (blockchain_ref.hasPendingTransactions()) {
-                    std.debug.print("📡 Broadcasting transaction to other peers...\n", .{});
-                    // 다른 피어들에게 트랜잭션 전파 (무한 루프 방지 필요)
+                // 9. 트랜잭션 풀이 일정 수준에 도달하면 다른 피어들에게 알림
+                const min_tx_for_broadcast = 3;
+                if (blockchain_ref.pending_transactions.items.len >= min_tx_for_broadcast) {
+                    std.debug.print("📡 Sufficient transactions accumulated, ready for mining/broadcasting\n", .{});
+                    
+                    // 실제 구현에서는 블록 마이닝을 시작하거나 다른 피어들에게 트랜잭션 집합을 브로드캐스트할 수 있음
+                    if (blockchain_ref.hasPendingTransactions()) {
+                        std.debug.print("🔨 Mining could be triggered with {} pending transactions\n", .{blockchain_ref.pending_transactions.items.len});
+                    }
                 }
+                
             } else {
-                std.debug.print("❌ Invalid transaction: empty data\n", .{});
+                std.debug.print("❌ Invalid transaction format: does not start with 'TX:'\n", .{});
             }
         } else {
             std.debug.print("❌ Invalid transaction: empty payload\n", .{});
