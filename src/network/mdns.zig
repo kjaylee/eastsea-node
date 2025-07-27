@@ -282,7 +282,7 @@ pub const MDNSMessage = struct {
 
 pub const MDNSDiscovery = struct {
     allocator: std.mem.Allocator,
-    socket: ?std.net.Server,
+    socket: ?std.posix.socket_t,
     local_address: []const u8,
     local_port: u16,
     service_instance: []const u8,
@@ -290,6 +290,7 @@ pub const MDNSDiscovery = struct {
     bootstrap_client: ?*bootstrap.BootstrapClient,
     discovered_peers: std.ArrayList(DiscoveredPeer),
     running: bool,
+    background_thread: ?std.Thread,
 
     pub const DiscoveredPeer = struct {
         address: []const u8,
@@ -339,6 +340,7 @@ pub const MDNSDiscovery = struct {
             .bootstrap_client = null,
             .discovered_peers = std.ArrayList(DiscoveredPeer).init(allocator),
             .running = false,
+            .background_thread = null,
         };
     }
 
@@ -363,28 +365,137 @@ pub const MDNSDiscovery = struct {
     }
 
     pub fn start(self: *MDNSDiscovery) !void {
-        // mDNS functionality temporarily disabled due to Zig 0.14 compatibility
-        // TODO: Implement UDP multicast socket support for Zig 0.14
         self.running = true;
         
-        std.debug.print("🔍 mDNS Discovery started (limited mode) on {s}:{}\n", .{ self.local_address, self.local_port });
+        std.debug.print("🔍 mDNS Discovery started on {s}:{}\n", .{ self.local_address, self.local_port });
         std.debug.print("📡 Service instance: {s}\n", .{self.service_instance});
-        std.debug.print("⚠️  UDP multicast temporarily disabled for Zig 0.14 compatibility\n", .{});
+        
+        // Create UDP socket for mDNS multicast communication
+        const multicast_addr = try std.net.Address.parseIp4(MDNS_MULTICAST_ADDRESS, MDNS_PORT);
+        
+        // Try to create UDP socket for multicast communication
+        const socket_fd = std.posix.socket(std.posix.AF.INET, std.posix.SOCK.DGRAM, 0) catch |err| {
+            std.debug.print("⚠️  Failed to create UDP socket: {}\n", .{err});
+            std.debug.print("🔍 mDNS Discovery started (limited mode - no multicast)\n", .{});
+            return;
+        };
+        
+        // Set socket options for multicast
+        const reuse_addr: c_int = 1;
+        _ = std.posix.setsockopt(socket_fd, std.posix.SOL.SOCKET, std.posix.SO.REUSEADDR, std.mem.asBytes(&reuse_addr)) catch |err| {
+            std.debug.print("⚠️  Failed to set REUSEADDR: {}\n", .{err});
+        };
+        
+        // Bind to multicast address
+        _ = std.posix.bind(socket_fd, &multicast_addr.any, multicast_addr.getOsSockLen()) catch |err| {
+            std.debug.print("⚠️  Failed to bind to multicast address: {}\n", .{err});
+            std.posix.close(socket_fd);
+            std.debug.print("🔍 mDNS Discovery started (limited mode - no multicast)\n", .{});
+            return;
+        };
+        
+        // Join multicast group - simplified for Zig 0.14 compatibility
+        // On macOS/Linux, the IP_ADD_MEMBERSHIP value is typically 35 for IPv4
+        const IP_ADD_MEMBERSHIP: c_int = 35;
+        const mreq = extern struct {
+            imr_multiaddr: extern struct { s_addr: u32 },
+            imr_interface: extern struct { s_addr: u32 },
+        }{
+            .imr_multiaddr = .{ .s_addr = @bitCast(multicast_addr.in.sa.addr) },
+            .imr_interface = .{ .s_addr = 0 }, // INADDR_ANY
+        };
+        _ = std.posix.setsockopt(socket_fd, std.posix.IPPROTO.IP, IP_ADD_MEMBERSHIP, std.mem.asBytes(&mreq)) catch |err| {
+            std.debug.print("⚠️  Failed to join multicast group: {}\n", .{err});
+            std.posix.close(socket_fd);
+            std.debug.print("🔍 mDNS Discovery started (limited mode - no multicast)\n", .{});
+            return;
+        };
+        
+        // Store socket
+        self.socket = socket_fd;
+        
+        std.debug.print("✅ mDNS multicast socket created successfully\n", .{});
+        std.debug.print("📡 Listening on multicast address: {s}:{}\n", .{ MDNS_MULTICAST_ADDRESS, MDNS_PORT });
+        
+        // Start background thread for handling mDNS messages
+        if (self.background_thread == null) {
+            self.background_thread = try std.Thread.spawn(.{}, mdnsBackgroundWorker, .{self});
+        }
     }
 
     pub fn stop(self: *MDNSDiscovery) void {
-        if (self.socket) |*socket| {
-            socket.deinit();
+        self.running = false;
+        
+        if (self.socket) |socket_fd| {
+            std.posix.close(socket_fd);
             self.socket = null;
         }
-        self.running = false;
+        
+        if (self.background_thread) |thread| {
+            thread.join();
+            self.background_thread = null;
+        }
+        
         std.debug.print("🛑 mDNS Discovery stopped\n", .{});
     }
 
     fn joinMulticastGroup(self: *MDNSDiscovery) !void {
-        // mDNS multicast temporarily disabled for Zig 0.14 compatibility
+        // This function is now integrated into the start() method
         _ = self;
-        std.debug.print("📡 mDNS multicast group joining disabled (Zig 0.14 compatibility)\n", .{});
+        std.debug.print("📡 mDNS multicast group integration complete\n", .{});
+    }
+
+    /// Background worker thread for handling mDNS messages
+    fn mdnsBackgroundWorker(self: *MDNSDiscovery) void {
+        std.debug.print("🔄 mDNS background worker started\n", .{});
+        
+        var buffer: [2048]u8 = undefined;
+        
+        while (self.running) {
+            if (self.socket) |socket_fd| {
+                // Receive mDNS messages
+                const bytes_received = std.posix.recv(socket_fd, &buffer, 0) catch |err| {
+                    if (err == error.WouldBlock or err == error.Again) {
+                        std.time.sleep(100_000_000); // 100ms
+                        continue;
+                    }
+                    std.debug.print("⚠️  mDNS recv error: {}\n", .{err});
+                    std.time.sleep(1_000_000_000); // 1 second
+                    continue;
+                };
+                
+                if (bytes_received > 0) {
+                    self.processMDNSMessage(buffer[0..bytes_received]) catch |err| {
+                        std.debug.print("⚠️  mDNS message processing error: {}\n", .{err});
+                    };
+                }
+            } else {
+                std.time.sleep(1_000_000_000); // 1 second if no socket
+            }
+        }
+        
+        std.debug.print("🛑 mDNS background worker stopped\n", .{});
+    }
+    
+    /// Process received mDNS message
+    fn processMDNSMessage(self: *MDNSDiscovery, data: []const u8) !void {
+        _ = self; // Mark as used to avoid compiler warning
+        if (data.len < 12) return; // Too small to be valid mDNS message
+        
+        const header = try MDNSHeader.deserialize(data);
+        std.debug.print("📨 mDNS message received: {} questions, {} answers\n", .{ header.questions, header.answers });
+        
+        // Basic processing - look for service announcements
+        if (header.answers > 0) {
+            std.debug.print("🔍 Processing mDNS service announcements\n", .{});
+            // Here we would parse the DNS records and extract peer information
+            // For now, just log that we received a service announcement
+        }
+        
+        if (header.questions > 0) {
+            std.debug.print("❓ mDNS query received - could respond with our service info\n", .{});
+            // Here we would check if the query is for our service type and respond
+        }
     }
 
     pub fn announceService(self: *MDNSDiscovery) !void {

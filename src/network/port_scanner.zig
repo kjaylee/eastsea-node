@@ -273,16 +273,101 @@ fn scanWorker(context: WorkerContext) void {
     }
 }
 
-/// 로컬 IP 주소 자동 감지
+/// 실제 로컬 IP 주소를 감지하는 함수 (다중 네트워크 인터페이스 지원)
 fn detectLocalIP(allocator: Allocator) ![4]u8 {
-    // 기본값으로 192.168.1.x 사용
-    // 실제로는 네트워크 인터페이스를 조회해야 하지만,
-    // 여기서는 간단히 처리
     _ = allocator;
     
-    // TODO: 실제 로컬 IP 감지 로직 구현
-    // 현재는 가장 일반적인 로컬 네트워크 대역 사용
+    // macOS의 경우 시스템 명령을 사용하여 실제 로컬 IP 감지
+    const result = std.process.Child.run(.{
+        .allocator = std.heap.page_allocator,
+        .argv = &[_][]const u8{ "route", "get", "default" },
+    }) catch {
+        std.debug.print("⚠️  Failed to execute route command, using fallback IP\n", .{});
+        return [4]u8{ 192, 168, 1, 0 };
+    };
+    defer std.heap.page_allocator.free(result.stdout);
+    defer std.heap.page_allocator.free(result.stderr);
+    
+    if (result.term.Exited != 0) {
+        std.debug.print("⚠️  Route command failed, using fallback IP\n", .{});
+        return [4]u8{ 192, 168, 1, 0 };
+    }
+    
+    // "interface: en0" 라인에서 인터페이스 찾기
+    var interface_name: ?[]const u8 = null;
+    var lines = std.mem.splitAny(u8, result.stdout, "\n");
+    while (lines.next()) |line| {
+        const trimmed = std.mem.trim(u8, line, " \t\r\n");
+        if (std.mem.startsWith(u8, trimmed, "interface:")) {
+            var parts = std.mem.splitAny(u8, trimmed, ":");
+            _ = parts.next(); // "interface" 부분 스킵
+            if (parts.next()) |iface| {
+                interface_name = std.mem.trim(u8, iface, " \t");
+                break;
+            }
+        }
+    }
+    
+    if (interface_name == null) {
+        std.debug.print("⚠️  Could not detect network interface, using fallback IP\n", .{});
+        return [4]u8{ 192, 168, 1, 0 };
+    }
+    
+    // ifconfig 명령으로 해당 인터페이스의 IP 주소 가져오기
+    const ifconfig_cmd = [_][]const u8{ "ifconfig", interface_name.? };
+    const ifconfig_result = std.process.Child.run(.{
+        .allocator = std.heap.page_allocator,
+        .argv = &ifconfig_cmd,
+    }) catch {
+        std.debug.print("⚠️  Failed to execute ifconfig command, using fallback IP\n", .{});
+        return [4]u8{ 192, 168, 1, 0 };
+    };
+    defer std.heap.page_allocator.free(ifconfig_result.stdout);
+    defer std.heap.page_allocator.free(ifconfig_result.stderr);
+    
+    if (ifconfig_result.term.Exited != 0) {
+        std.debug.print("⚠️  ifconfig command failed, using fallback IP\n", .{});
+        return [4]u8{ 192, 168, 1, 0 };
+    }
+    
+    // "inet xxx.xxx.xxx.xxx" 형태의 IP 주소 찾기
+    var ifconfig_lines = std.mem.splitAny(u8, ifconfig_result.stdout, "\n");
+    while (ifconfig_lines.next()) |line| {
+        const trimmed = std.mem.trim(u8, line, " \t\r\n");
+        if (std.mem.startsWith(u8, trimmed, "inet ")) {
+            var parts = std.mem.splitAny(u8, trimmed, " ");
+            _ = parts.next(); // "inet" 부분 스킵
+            if (parts.next()) |ip_str| {
+                // IP 주소가 localhost가 아닌 경우에만 사용
+                if (!std.mem.eql(u8, ip_str, "127.0.0.1")) {
+                    if (parseIPv4(ip_str)) |ip_bytes| {
+                        std.debug.print("✅ Detected local IP: {}.{}.{}.{} on interface {s}\n", .{ ip_bytes[0], ip_bytes[1], ip_bytes[2], ip_bytes[3], interface_name.? });
+                        return ip_bytes;
+                    }
+                }
+            }
+        }
+    }
+    
+    std.debug.print("⚠️  Could not detect valid IP address, using fallback IP\n", .{});
     return [4]u8{ 192, 168, 1, 0 };
+}
+
+/// IPv4 주소 문자열을 바이트 배열로 파싱
+fn parseIPv4(ip_str: []const u8) ?[4]u8 {
+    var parts = std.mem.splitAny(u8, ip_str, ".");
+    var ip_bytes: [4]u8 = undefined;
+    var i: usize = 0;
+    
+    while (parts.next()) |part| {
+        if (i >= 4) return null;
+        const byte_val = std.fmt.parseInt(u8, part, 10) catch return null;
+        ip_bytes[i] = byte_val;
+        i += 1;
+    }
+    
+    if (i != 4) return null;
+    return ip_bytes;
 }
 
 /// 일반적인 로컬 네트워크 대역들
