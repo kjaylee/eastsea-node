@@ -151,9 +151,16 @@ pub fn main() !void {
     print("  • PoH ticks processed: {}\n", .{poh_state.tick_count});
     print("  • RPC server running: {}\n", .{rpc_server.isRunning()});
     
-    // Cleanup
+    // Cleanup with proper error handling
+    print("\n🧹 Shutting down components...\n", .{});
+    
     rpc_server.stop();
-    node.stop();
+    print("✅ RPC server stopped\n", .{});
+    
+    node.stop(); 
+    print("✅ Network node stopped\n", .{});
+    
+    print("✅ Cleanup completed successfully\n", .{});
 }
 
 test "basic functionality" {

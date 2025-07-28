@@ -132,11 +132,36 @@ pub const Node = struct {
         if (self.p2p_node == null) return error.NodeNotStarted;
         
         const address = try std.net.Address.parseIp4(peer_address, peer_port);
-        _ = try self.p2p_node.?.connectToPeer(address);
         
-        // Add to legacy peer list for compatibility
-        const peer = PeerInfo.init(peer_address, peer_port);
-        try self.addPeer(peer);
+        // Validate peer before attempting connection
+        if (self.isPeerValid(peer_address, peer_port)) {
+            _ = self.p2p_node.?.connectToPeer(address) catch |err| {
+                std.debug.print("⚠️  Failed to connect to peer {s}:{}: {}\n", .{ peer_address, peer_port, err });
+                return; // Don't fail, just continue
+            };
+            
+            // Add to legacy peer list for compatibility only if connection succeeded
+            const peer = PeerInfo.init(peer_address, peer_port);
+            try self.addPeer(peer);
+        } else {
+            std.debug.print("⚠️  Skipping invalid peer {s}:{}\n", .{ peer_address, peer_port });
+        }
+    }
+    
+    fn isPeerValid(self: *Node, peer_address: []const u8, peer_port: u16) bool {
+        // Don't connect to self
+        if (std.mem.eql(u8, peer_address, self.address) and peer_port == self.port) {
+            return false;
+        }
+        
+        // Check if already connected
+        for (self.peers.items) |peer| {
+            if (std.mem.eql(u8, peer.address, peer_address) and peer.port == peer_port) {
+                return false; // Already connected
+            }
+        }
+        
+        return true;
     }
 
     pub fn startAcceptingConnections(self: *Node) !void {

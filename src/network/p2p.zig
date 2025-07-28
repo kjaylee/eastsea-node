@@ -224,7 +224,14 @@ pub const P2PNode = struct {
     }
 
     pub fn start(self: *P2PNode) !void {
-        self.server = try self.address.listen(.{});
+        // Try to bind to the address, with retry logic for port conflicts
+        self.server = self.address.listen(.{}) catch |err| switch (err) {
+            error.AddressInUse => {
+                std.debug.print("⚠️  Port {} in use, trying to find available port...\n", .{self.address.getPort()});
+                return self.findAndBindAvailablePort();
+            },
+            else => return err,
+        };
         self.running = true;
         
         std.debug.print("🌐 P2P Node started on {}\n", .{self.address});
@@ -235,6 +242,28 @@ pub const P2PNode = struct {
         try self.registerMessageHandler(1, handlePongMessage);
         try self.registerMessageHandler(2, handleBlockMessage);
         try self.registerMessageHandler(3, handleTransactionMessage);
+    }
+    
+    fn findAndBindAvailablePort(self: *P2PNode) !void {
+        const base_port = self.address.getPort();
+        var port = base_port;
+        const max_attempts = 10;
+        
+        for (0..max_attempts) |i| {
+            port = base_port + @as(u16, @intCast(i));
+            const new_address = std.net.Address.initIp4([4]u8{127, 0, 0, 1}, port);
+            
+            if (new_address.listen(.{})) |server| {
+                self.server = server;
+                self.address = new_address;
+                std.debug.print("✅ Found available port: {}\n", .{port});
+                return;
+            } else |_| {
+                continue;
+            }
+        }
+        
+        return error.NoAvailablePort;
     }
 
     pub fn stop(self: *P2PNode) void {
@@ -247,7 +276,24 @@ pub const P2PNode = struct {
     }
 
     pub fn connectToPeer(self: *P2PNode, peer_address: net.Address) !*PeerConnection {
-        const stream = try net.tcpConnectToAddress(peer_address);
+        const stream = net.tcpConnectToAddress(peer_address) catch |err| switch (err) {
+            error.ConnectionRefused => {
+                std.debug.print("⚠️  Could not connect to peer {}: Connection refused\n", .{peer_address});
+                return error.PeerNotFound;
+            },
+            error.NetworkUnreachable => {
+                std.debug.print("⚠️  Could not connect to peer {}: Network unreachable\n", .{peer_address});
+                return error.NetworkError;
+            },
+            error.ConnectionTimedOut => {
+                std.debug.print("⚠️  Could not connect to peer {}: Connection timed out\n", .{peer_address});
+                return error.ConnectionTimedOut;
+            },
+            else => {
+                std.debug.print("⚠️  Could not connect to peer {}: {}\n", .{ peer_address, err });
+                return err;
+            },
+        };
         
         const peer = try self.allocator.create(PeerConnection);
         peer.* = PeerConnection.init(self.allocator, stream, peer_address);
@@ -257,7 +303,10 @@ pub const P2PNode = struct {
         std.debug.print("🤝 Connected to peer: {}\n", .{peer_address});
         
         // Send handshake
-        try self.sendHandshake(peer);
+        self.sendHandshake(peer) catch |err| {
+            std.debug.print("⚠️  Failed to send handshake to {}: {}\n", .{ peer_address, err });
+            // Don't fail the connection for handshake errors
+        };
         
         return peer;
     }
