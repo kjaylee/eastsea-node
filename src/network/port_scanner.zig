@@ -273,101 +273,183 @@ fn scanWorker(context: WorkerContext) void {
     }
 }
 
-/// 실제 로컬 IP 주소를 감지하는 함수 (다중 네트워크 인터페이스 지원)
-fn detectLocalIP(allocator: Allocator) ![4]u8 {
-    _ = allocator;
+/// 네트워크 인터페이스 정보 구조체
+const NetworkInterface = struct {
+    name: []const u8,
+    ip: [4]u8,
+    is_active: bool,
+    is_wifi: bool,
+    is_ethernet: bool,
+};
+
+/// 모든 네트워크 인터페이스를 감지하는 함수
+fn detectAllNetworkInterfaces(allocator: Allocator) !std.ArrayList(NetworkInterface) {
+    var interfaces = std.ArrayList(NetworkInterface).init(allocator);
     
-    // macOS의 경우 시스템 명령을 사용하여 실제 로컬 IP 감지
-    const result = std.process.Child.run(.{
-        .allocator = std.heap.page_allocator,
-        .argv = &[_][]const u8{ "route", "get", "default" },
-    }) catch {
-        std.debug.print("⚠️  Failed to execute route command, using fallback IP\n", .{});
-        return [4]u8{ 192, 168, 1, 0 };
-    };
-    defer std.heap.page_allocator.free(result.stdout);
-    defer std.heap.page_allocator.free(result.stderr);
-    
-    if (result.term.Exited != 0) {
-        std.debug.print("⚠️  Route command failed, using fallback IP\n", .{});
-        return [4]u8{ 192, 168, 1, 0 };
-    }
-    
-    // "interface: en0" 라인에서 인터페이스 찾기
-    var interface_name: ?[]const u8 = null;
-    var lines = std.mem.splitAny(u8, result.stdout, "\n");
-    while (lines.next()) |line| {
-        const trimmed = std.mem.trim(u8, line, " \t\r\n");
-        if (std.mem.startsWith(u8, trimmed, "interface:")) {
-            var parts = std.mem.splitAny(u8, trimmed, ":");
-            _ = parts.next(); // "interface" 부분 스킵
-            if (parts.next()) |iface| {
-                interface_name = std.mem.trim(u8, iface, " \t");
-                break;
-            }
-        }
-    }
-    
-    if (interface_name == null) {
-        std.debug.print("⚠️  Could not detect network interface, using fallback IP\n", .{});
-        return [4]u8{ 192, 168, 1, 0 };
-    }
-    
-    // ifconfig 명령으로 해당 인터페이스의 IP 주소 가져오기
-    const ifconfig_cmd = [_][]const u8{ "ifconfig", interface_name.? };
+    // ifconfig 명령으로 모든 인터페이스 정보 가져오기
     const ifconfig_result = std.process.Child.run(.{
-        .allocator = std.heap.page_allocator,
-        .argv = &ifconfig_cmd,
+        .allocator = allocator,
+        .argv = &[_][]const u8{ "ifconfig" },
     }) catch {
-        std.debug.print("⚠️  Failed to execute ifconfig command, using fallback IP\n", .{});
-        return [4]u8{ 192, 168, 1, 0 };
+        std.debug.print("⚠️  Failed to execute ifconfig command\n", .{});
+        return interfaces;
     };
-    defer std.heap.page_allocator.free(ifconfig_result.stdout);
-    defer std.heap.page_allocator.free(ifconfig_result.stderr);
+    defer allocator.free(ifconfig_result.stdout);
+    defer allocator.free(ifconfig_result.stderr);
     
     if (ifconfig_result.term.Exited != 0) {
-        std.debug.print("⚠️  ifconfig command failed, using fallback IP\n", .{});
-        return [4]u8{ 192, 168, 1, 0 };
+        std.debug.print("⚠️  ifconfig command failed\n", .{});
+        return interfaces;
     }
     
-    // "inet xxx.xxx.xxx.xxx" 형태의 IP 주소 찾기
-    var ifconfig_lines = std.mem.splitAny(u8, ifconfig_result.stdout, "\n");
-    while (ifconfig_lines.next()) |line| {
+    var current_interface: ?[]const u8 = null;
+    var current_ip: ?[4]u8 = null;
+    var is_active = false;
+    
+    var lines = std.mem.splitAny(u8, ifconfig_result.stdout, "\n");
+    while (lines.next()) |line| {
         const trimmed = std.mem.trim(u8, line, " \t\r\n");
-        if (std.mem.startsWith(u8, trimmed, "inet ")) {
-            var parts = std.mem.splitAny(u8, trimmed, " ");
-            _ = parts.next(); // "inet" 부분 스킵
-            if (parts.next()) |ip_str| {
-                // IP 주소가 localhost가 아닌 경우에만 사용
-                if (!std.mem.eql(u8, ip_str, "127.0.0.1")) {
-                    if (parseIPv4(ip_str)) |ip_bytes| {
-                        std.debug.print("✅ Detected local IP: {}.{}.{}.{} on interface {s}\n", .{ ip_bytes[0], ip_bytes[1], ip_bytes[2], ip_bytes[3], interface_name.? });
-                        return ip_bytes;
+        
+        // 새로운 인터페이스 시작 (첫 번째 문자가 공백이 아님)
+        if (trimmed.len > 0 and line[0] != ' ' and line[0] != '\t') {
+            // 이전 인터페이스 저장
+            if (current_interface) |iface| {
+                if (current_ip) |ip| {
+                    try interfaces.append(NetworkInterface{
+                        .name = try allocator.dupe(u8, iface),
+                        .ip = ip,
+                        .is_active = is_active,
+                        .is_wifi = std.mem.startsWith(u8, iface, "en") and !std.mem.startsWith(u8, iface, "en0"),
+                        .is_ethernet = std.mem.startsWith(u8, iface, "en0"),
+                    });
+                }
+            }
+            
+            // 새 인터페이스 파싱
+            var parts = std.mem.splitAny(u8, trimmed, ":");
+            if (parts.next()) |iface_name| {
+                current_interface = std.mem.trim(u8, iface_name, " \t");
+                current_ip = null;
+                is_active = false;
+            }
+        }
+        // IP 주소 라인 파싱
+        else if (std.mem.indexOf(u8, trimmed, "inet ")) |_| {
+            var inet_parts = std.mem.splitAny(u8, trimmed, " ");
+            while (inet_parts.next()) |part| {
+                if (std.mem.eql(u8, part, "inet")) {
+                    if (inet_parts.next()) |ip_str| {
+                        current_ip = parseIPAddress(ip_str);
+                        break;
                     }
                 }
             }
         }
+        // 활성 상태 확인
+        else if (std.mem.indexOf(u8, trimmed, "status: active")) |_| {
+            is_active = true;
+        }
     }
     
-    std.debug.print("⚠️  Could not detect valid IP address, using fallback IP\n", .{});
-    return [4]u8{ 192, 168, 1, 0 };
+    // 마지막 인터페이스 처리
+    if (current_interface) |iface| {
+        if (current_ip) |ip| {
+            try interfaces.append(NetworkInterface{
+                .name = try allocator.dupe(u8, iface),
+                .ip = ip,
+                .is_active = is_active,
+                .is_wifi = std.mem.startsWith(u8, iface, "en") and !std.mem.startsWith(u8, iface, "en0"),
+                .is_ethernet = std.mem.startsWith(u8, iface, "en0"),
+            });
+        }
+    }
+    
+    return interfaces;
 }
 
-/// IPv4 주소 문자열을 바이트 배열로 파싱
-fn parseIPv4(ip_str: []const u8) ?[4]u8 {
+/// IP 주소 문자열을 [4]u8로 파싱
+fn parseIPAddress(ip_str: []const u8) ?[4]u8 {
     var parts = std.mem.splitAny(u8, ip_str, ".");
-    var ip_bytes: [4]u8 = undefined;
+    var ip: [4]u8 = undefined;
     var i: usize = 0;
     
     while (parts.next()) |part| {
-        if (i >= 4) return null;
-        const byte_val = std.fmt.parseInt(u8, part, 10) catch return null;
-        ip_bytes[i] = byte_val;
+        if (i >= 4) break;
+        ip[i] = std.fmt.parseInt(u8, part, 10) catch return null;
         i += 1;
     }
     
-    if (i != 4) return null;
-    return ip_bytes;
+    if (i == 4) return ip else return null;
+}
+
+/// 최적의 네트워크 인터페이스 선택
+fn selectBestInterface(interfaces: []const NetworkInterface) ?NetworkInterface {
+    // 우선순위: 활성 상태 > 이더넷 > WiFi > 기타
+    var best_interface: ?NetworkInterface = null;
+    
+    for (interfaces) |iface| {
+        if (!iface.is_active) continue;
+        
+        // 루프백 주소 제외
+        if (iface.ip[0] == 127) continue;
+        
+        if (best_interface == null) {
+            best_interface = iface;
+            continue;
+        }
+        
+        const current_best = best_interface.?;
+        
+        // 이더넷이 WiFi보다 우선
+        if (iface.is_ethernet and !current_best.is_ethernet) {
+            best_interface = iface;
+            continue;
+        }
+        
+        // WiFi가 기타보다 우선
+        if (iface.is_wifi and !current_best.is_wifi and !current_best.is_ethernet) {
+            best_interface = iface;
+        }
+    }
+    
+    return best_interface;
+}
+
+/// 실제 로컬 IP 주소를 감지하는 함수 (다중 네트워크 인터페이스 지원)
+fn detectLocalIP(allocator: Allocator) ![4]u8 {
+    std.debug.print("🔍 Detecting all network interfaces...\n", .{});
+    
+    // 모든 네트워크 인터페이스 감지
+    var interfaces = detectAllNetworkInterfaces(allocator) catch |err| {
+        std.debug.print("⚠️  Failed to detect network interfaces: {}\n", .{err});
+        return [4]u8{ 192, 168, 1, 0 };
+    };
+    defer {
+        for (interfaces.items) |iface| {
+            allocator.free(iface.name);
+        }
+        interfaces.deinit();
+    }
+    
+    std.debug.print("📊 Found {} network interfaces:\n", .{interfaces.items.len});
+    for (interfaces.items) |iface| {
+        const type_str = if (iface.is_ethernet) "Ethernet" else if (iface.is_wifi) "WiFi" else "Other";
+        const status_str = if (iface.is_active) "Active" else "Inactive";
+        std.debug.print("  - {s}: {}.{}.{}.{} ({s}, {s})\n", .{ 
+            iface.name, iface.ip[0], iface.ip[1], iface.ip[2], iface.ip[3], type_str, status_str 
+        });
+    }
+    
+    // 최적의 인터페이스 선택
+    if (selectBestInterface(interfaces.items)) |best| {
+        std.debug.print("✅ Selected interface: {s} - {}.{}.{}.{}\n", .{ 
+            best.name, best.ip[0], best.ip[1], best.ip[2], best.ip[3] 
+        });
+        return best.ip;
+    }
+    
+    std.debug.print("⚠️  No suitable network interface found, using fallback IP\n", .{});
+    return [4]u8{ 192, 168, 1, 0 };
 }
 
 /// 일반적인 로컬 네트워크 대역들
