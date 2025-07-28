@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(lsof:*)",
+      "Bash(zig build:*)",
+      "Bash(kill:*)"
+    ]
+  },
+  "enableAllProjectMcpServers": false
+}
