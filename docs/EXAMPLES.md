@@ -1244,7 +1244,7 @@ pub const CustomDiscovery = struct {
         
         try self.discovered_peers.append(message);
         
-        std.log.info("🆕 Discovered new peer: {} at {}:{}", .{
+        std.log.info("🆕 Discovered new peer: {} at {}:{} via TCP", .{
             std.fmt.fmtSliceHexLower(message.node_id[0..8]),
             std.fmt.fmtSliceHexLower(&message.address),
             message.port,
@@ -1316,6 +1316,161 @@ pub fn main() !void {
     defer discovery.deinit();
     
     try discovery.startDiscovery();
+}
+```
+
+### 2. QUIC Network Example
+
+```zig
+// quic_network_example.zig - QUIC-based network communication example
+
+const std = @import("std");
+const network = @import("../src/network/quic.zig");
+
+pub const QuicNetworkExample = struct {
+    const Self = @This();
+    
+    allocator: std.mem.Allocator,
+    quic_node: *network.QuicNode,
+    
+    pub fn init(allocator: std.mem.Allocator, port: u16) !Self {
+        const quic_node = try allocator.create(network.QuicNode);
+        quic_node.* = try network.QuicNode.init(allocator, port);
+        
+        return Self{
+            .allocator = allocator,
+            .quic_node = quic_node,
+        };
+    }
+    
+    pub fn deinit(self: *Self) void {
+        self.quic_node.deinit();
+        self.allocator.destroy(self.quic_node);
+    }
+    
+    pub fn startNode(self: *Self) !void {
+        try self.quic_node.start();
+        std.log.info("🚀 QUIC node started on port {}", .{self.quic_node.address.getPort()});
+    }
+    
+    pub fn connectToPeer(self: *Self, peer_address: []const u8, peer_port: u16) !void {
+        const address = try std.net.Address.parseIp4(peer_address, peer_port);
+        const connection = try self.quic_node.connectToPeer(address);
+        
+        std.log.info("🤝 Connected to peer {}:{}", .{ peer_address, peer_port });
+        
+        // Create a stream for communication
+        const stream = try connection.createStream(true); // Bidirectional
+        
+        // Send a test message
+        const message = "Hello from QUIC!";
+        try stream.send(message);
+        
+        std.log.info("📤 Sent message: \"{s}\"", .{message});
+        
+        // Receive response
+        var buffer: [1024]u8 = undefined;
+        const bytes_received = try stream.receive(&buffer);
+        
+        if (bytes_received > 0) {
+            std.log.info("📥 Received response: \"{s}\"", .{buffer[0..bytes_received]});
+        }
+    }
+    
+    pub fn runServer(self: *Self) !void {
+        try self.quic_node.start();
+        
+        // Register message handlers
+        try self.quic_node.registerMessageHandler(0, handleTestMessage);
+        try self.quic_node.registerMessageHandler(1, handleBlockMessage);
+        try self.quic_node.registerMessageHandler(2, handleTransactionMessage);
+        
+        std.log.info("🌐 QUIC server listening on port {}", .{self.quic_node.address.getPort()});
+        
+        // Accept connections
+        try self.quic_node.acceptConnections();
+    }
+    
+    pub fn sendTestMessage(self: *Self, peer_address: []const u8, peer_port: u16) !void {
+        const address = try std.net.Address.parseIp4(peer_address, peer_port);
+        const connection = try self.quic_node.connectToPeer(address);
+        
+        var message = try network.QuicMessage.init(self.allocator, 0, "Test QUIC message");
+        defer message.deinit();
+        
+        try connection.sendMessage(&message);
+        
+        std.log.info("📤 Test message sent to {}:{}", .{ peer_address, peer_port });
+    }
+};
+
+// Message handlers
+fn handleTestMessage(node: *network.QuicNode, connection: *network.QuicConnection, message: *const network.QuicMessage) !void {
+    _ = node;
+    std.log.info("📥 Received test message from connection: {s}", .{message.payload});
+    
+    // Send response
+    var response = try network.QuicMessage.init(node.allocator, 0, "QUIC test response");
+    defer response.deinit();
+    
+    try connection.sendMessage(&response);
+}
+
+fn handleBlockMessage(node: *network.QuicNode, connection: *network.QuicConnection, message: *const network.QuicMessage) !void {
+    _ = node;
+    _ = connection;
+    std.log.info("📦 Received block message: {} bytes", .{message.payload.len});
+    
+    // Process block (in a real implementation)
+    std.log.info("✅ Block processed successfully", .{});
+}
+
+fn handleTransactionMessage(node: *network.QuicNode, connection: *network.QuicConnection, message: *const network.QuicMessage) !void {
+    _ = node;
+    _ = connection;
+    std.log.info("💸 Received transaction message: {} bytes", .{message.payload.len});
+    
+    // Process transaction (in a real implementation)
+    std.log.info("✅ Transaction processed successfully", .{});
+}
+
+pub fn main() !void {
+    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+    defer _ = gpa.deinit();
+    const allocator = gpa.allocator();
+    
+    const args = try std.process.argsAlloc(allocator);
+    defer std.process.argsFree(allocator, args);
+    
+    if (args.len < 2) {
+        std.log.err("Usage: {} <mode> [port] [peer_address] [peer_port]", .{args[0]});
+        std.log.err("Modes: server, client", .{});
+        return;
+    }
+    
+    const mode = args[1];
+    
+    if (std.mem.eql(u8, mode, "server")) {
+        const port = if (args.len > 2) try std.fmt.parseInt(u16, args[2], 10) else 8000;
+        
+        var example = try QuicNetworkExample.init(allocator, port);
+        defer example.deinit();
+        
+        try example.runServer();
+    } else if (std.mem.eql(u8, mode, "client")) {
+        const port = if (args.len > 2) try std.fmt.parseInt(u16, args[2], 10) else 8001;
+        const peer_address = if (args.len > 3) args[3] else "127.0.0.1";
+        const peer_port = if (args.len > 4) try std.fmt.parseInt(u16, args[4], 10) else 8000;
+        
+        var example = try QuicNetworkExample.init(allocator, port);
+        defer example.deinit();
+        
+        try example.startNode();
+        try example.sendTestMessage(peer_address, peer_port);
+    } else {
+        std.log.err("Invalid mode. Use 'server' or 'client'", .{});
+        return;
+    }
 }
 ```
 
@@ -1838,3 +1993,5 @@ pub fn main() !void {
 ---
 
 This comprehensive collection of examples demonstrates various aspects of the Eastsea blockchain system, from basic usage to advanced features and optimizations. Each example is designed to be educational and practical, showing real-world usage patterns and best practices.
+
+With the addition of QUIC support, Eastsea now provides both TCP and QUIC networking options, giving developers flexibility in choosing the most appropriate protocol for their use case. The QUIC implementation provides enhanced performance, security, and connection management features that complement the existing TCP-based networking stack.

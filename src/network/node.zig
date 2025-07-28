@@ -2,6 +2,7 @@ const std = @import("std");
 const crypto = @import("../crypto/hash.zig");
 const p2p = @import("p2p.zig");
 const dht = @import("dht.zig");
+const quic = @import("quic.zig");
 const blockchain = @import("../blockchain/blockchain.zig");
 
 pub const NodeId = [32]u8;
@@ -56,6 +57,7 @@ pub const Node = struct {
     allocator: std.mem.Allocator,
     is_running: bool,
     p2p_node: ?*p2p.P2PNode,
+    quic_node: ?*quic.QuicNode, // Add QUIC node support
     dht: ?*dht.DHT,
     blockchain: ?*blockchain.Blockchain, // 블록체인 참조 추가
 
@@ -71,6 +73,7 @@ pub const Node = struct {
             .allocator = allocator,
             .is_running = false,
             .p2p_node = null,
+            .quic_node = null, // Initialize QUIC node as null
             .dht = null,
             .blockchain = null, // 초기에는 null
         };
@@ -80,6 +83,10 @@ pub const Node = struct {
         if (self.dht) |dht_instance| {
             dht_instance.deinit();
             self.allocator.destroy(dht_instance);
+        }
+        if (self.quic_node) |quic_node| {
+            quic_node.deinit();
+            self.allocator.destroy(quic_node);
         }
         if (self.p2p_node) |p2p_node| {
             p2p_node.deinit();
@@ -98,6 +105,11 @@ pub const Node = struct {
         p2p_node.* = try p2p.P2PNode.init(self.allocator, self.port);
         self.p2p_node = p2p_node;
         
+        // Initialize QUIC node
+        const quic_node = try self.allocator.create(quic.QuicNode);
+        quic_node.* = try quic.QuicNode.init(self.allocator, self.port + 1000); // Use different port for QUIC
+        self.quic_node = quic_node;
+        
         // Initialize DHT
         const dht_instance = try self.allocator.create(dht.DHT);
         dht_instance.* = try dht.DHT.init(self.allocator, self.address, self.port);
@@ -113,16 +125,21 @@ pub const Node = struct {
         }
         
         try p2p_node.start();
+        try quic_node.start(); // Start QUIC node
         
         self.is_running = true;
         std.debug.print("🌐 Node started on {s}:{}\n", .{ self.address, self.port });
         std.debug.print("🆔 Node ID: {}\n", .{std.fmt.fmtSliceHexLower(&self.id)});
         std.debug.print("🔗 DHT initialized\n", .{});
+        std.debug.print("퀵 QUIC node initialized on port {}\n", .{self.port + 1000});
     }
 
     pub fn stop(self: *Node) void {
         if (self.p2p_node) |p2p_node| {
             p2p_node.stop();
+        }
+        if (self.quic_node) |quic_node| {
+            quic_node.stop();
         }
         self.is_running = false;
         std.debug.print("🛑 Node stopped\n", .{});

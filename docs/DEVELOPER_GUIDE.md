@@ -18,7 +18,7 @@
 Eastsea는 Zig 언어로 구현된 블록체인 클론으로, 다음과 같은 주요 특징을 가집니다:
 
 - **Proof of History (PoH) 합의 메커니즘**
-- **실제 TCP 소켓 기반 P2P 네트워킹**
+- **실제 TCP/QUIC 소켓 기반 P2P 네트워킹**
 - **DHT를 통한 자동 피어 발견**
 - **스마트 컨트랙트 (Programs) 지원**
 - **JSON-RPC API**
@@ -27,7 +27,7 @@ Eastsea는 Zig 언어로 구현된 블록체인 클론으로, 다음과 같은 �
 ### Technology Stack
 
 - **Language**: Zig 0.14+
-- **Networking**: TCP Sockets, UDP (DHT)
+- **Networking**: TCP/QUIC Sockets, UDP (DHT)
 - **Cryptography**: SHA-256, ECDSA
 - **Serialization**: Custom binary protocol
 - **Testing**: Zig built-in test framework
@@ -126,7 +126,8 @@ src/
 ├── consensus/               # Consensus mechanisms
 │   └── poh.zig             # Proof of History
 ├── network/                 # Networking layer
-│   ├── p2p.zig             # P2P networking
+│   ├── p2p.zig             # P2P networking (TCP)
+│   ├── quic.zig            # QUIC networking
 │   ├── node.zig            # Network node
 │   ├── dht.zig             # DHT implementation
 │   ├── bootstrap.zig       # Bootstrap nodes
@@ -242,6 +243,25 @@ pub const P2PNode = struct {
     
     pub fn broadcast(self: *P2PNode, message: Message) !void {
         // Broadcast message to all peers
+    }
+};
+
+pub const QuicNode = struct {
+    node_id: [32]u8,
+    address: std.net.Address,
+    connections: std.ArrayList(QuicConnection),
+    server: std.net.Server,
+    
+    pub fn start(self: *QuicNode) !void {
+        // Start QUIC server
+    }
+    
+    pub fn connectToPeer(self: *QuicNode, address: std.net.Address) !void {
+        // Connect to remote peer via QUIC
+    }
+    
+    pub fn broadcast(self: *QuicNode, message: Message) !void {
+        // Broadcast message to all QUIC connections
     }
 };
 ```

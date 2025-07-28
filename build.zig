@@ -316,7 +316,7 @@ pub fn build(b: *std.Build) void {
     const phase9_test_run_step = b.step("run-phase9", "Run Phase 9 comprehensive testing framework");
     phase9_test_run_step.dependOn(&phase9_test_run_cmd.step);
 
-    // QUIC Protocol Test executable (Phase 13 - Future implementation)
+    // QUIC Protocol Test executable (Phase 13)
     const quic_test_exe = b.addExecutable(.{
         .name = "quic-test",
         .root_source_file = b.path("src/quic_test.zig"),

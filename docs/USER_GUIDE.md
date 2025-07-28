@@ -26,6 +26,7 @@ Eastsea는 Zig 언어로 구현된 현대적인 블록체인 플랫폼입니다.
 - **🔒 강력한 보안**: ECDSA 디지털 서명 및 SHA-256 해싱
 - **💡 스마트 컨트랙트**: 사용자 정의 프로그램 실행 지원
 - **🔧 개발자 친화적**: 완전한 JSON-RPC API 제공
+- **🚀 고성능 네트워킹**: TCP/QUIC 하이브리드 프로토콜 지원
 
 ### 🎯 사용 사례
 
@@ -44,6 +45,7 @@ Eastsea는 Zig 언어로 구현된 현대적인 블록체인 플랫폼입니다.
 - **Memory**: 최소 4GB RAM (8GB 권장)
 - **Storage**: 최소 1GB 여유 공간
 - **Network**: 인터넷 연결 (P2P 네트워크 참여용)
+- **QUIC Support**: 최신 네트워크 스택 (QUIC/HTTP3 지원)
 
 ### Prerequisites
 
@@ -540,6 +542,51 @@ zig build run-port-scan -- 8000
 ```bash
 # 네트워크에 노드 존재 공지
 zig build run-broadcast -- 8000
+```
+
+### 6. QUIC 네트워크 테스트
+
+Eastsea는 TCP와 QUIC 프로토콜을 모두 지원하는 하이브리드 네트워킹을 사용합니다. 
+QUIC는 다음과 같은 고급 기능을 제공합니다:
+
+- **Multiplexed Streams**: 여러 스트림을 동시에 사용하여 블록과 트랜잭션을 병렬로 전송
+- **0-RTT Connection Resumption**: 연결 재개 시 지연 시간 최소화
+- **Connection Migration**: IP 주소 변경 시 연결 유지
+- **Enhanced Security**: 연결 ID 암호화 및 패킷 인증
+
+#### QUIC 기본 연결 테스트
+
+```bash
+# QUIC 기본 연결 테스트
+zig build run-quic -- basic
+```
+
+#### QUIC 멀티 스트림 테스트
+
+```bash
+# QUIC 멀티 스트림 기능 테스트
+zig build run-quic -- streams
+```
+
+#### QUIC 보안 기능 테스트
+
+```bash
+# QUIC 보안 기능 테스트
+zig build run-quic -- security
+```
+
+#### QUIC 성능 벤치마크
+
+```bash
+# QUIC 성능 벤치마크 테스트
+zig build run-quic -- performance
+```
+
+#### 전체 QUIC 테스트
+
+```bash
+# QUIC 모든 기능 테스트
+zig build run-quic -- all
 ```
 
 ---

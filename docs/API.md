@@ -5,7 +5,7 @@
 Eastsea는 Zig로 구현된 블록체인 클론으로, 다음과 같은 주요 API들을 제공합니다:
 
 - **JSON-RPC API**: 블록체인 상태 조회 및 트랜잭션 제출
-- **P2P Network API**: 노드 간 통신 및 피어 관리
+- **P2P Network API**: 노드 간 통신 및 피어 관리 (TCP/QUIC 하이브리드)
 - **Wallet API**: 계정 관리 및 트랜잭션 서명
 - **Smart Contract API**: 프로그램 실행 및 관리
 
@@ -224,7 +224,8 @@ Eastsea는 표준 JSON-RPC 2.0 프로토콜을 사용하여 HTTP 기반 API를 �
 
 ## P2P Network API
 
-P2P 네트워크는 내부적으로 사용되는 API로, 노드 간 직접 통신에 사용됩니다.
+P2P 네트워크는 내부적으로 사용되는 API로, 노드 간 직접 통신에 사용됩니다. 
+Eastsea는 TCP와 QUIC 프로토콜을 모두 지원하는 하이브리드 네트워킹을 사용합니다.
 
 ### Message Types
 
@@ -267,6 +268,15 @@ const TransactionMessage = struct {
     transaction_hash: [32]u8,
 };
 ```
+
+### QUIC Specific Features
+
+QUIC 프로토콜은 다음과 같은 고급 기능을 제공합니다:
+
+1. **Multiplexed Streams**: 여러 스트림을 동시에 사용하여 블록과 트랜잭션을 병렬로 전송
+2. **0-RTT Connection Resumption**: 연결 재개 시 지연 시간 최소화
+3. **Connection Migration**: IP 주소 변경 시 연결 유지
+4. **Enhanced Security**: 연결 ID 암호화 및 패킷 인증
 
 ---
 
