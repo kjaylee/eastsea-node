@@ -467,6 +467,9 @@ pub const DHT = struct {
     pub fn attachP2PNode(self: *DHT, p2p_node: *p2p.P2PNode) !void {
         self.p2p_node = p2p_node;
         
+        // Set DHT instance as user_data for message handlers
+        p2p_node.user_data = self;
+        
         // Register DHT message handlers
         try p2p_node.registerMessageHandler(@intFromEnum(DHTMessageType.ping), handleDHTPing);
         try p2p_node.registerMessageHandler(@intFromEnum(DHTMessageType.pong), handleDHTPong);
@@ -531,15 +534,34 @@ pub const DHT = struct {
 };
 
 // DHT message handlers
-fn handleDHTPing(_: *p2p.P2PNode, peer: *p2p.PeerConnection, message: *const p2p.P2PMessage) !void {
+fn handleDHTPing(p2p_node: *p2p.P2PNode, peer: *p2p.PeerConnection, message: *const p2p.P2PMessage) !void {
     std.debug.print("🏓 DHT: Received ping\n", .{});
     
     // Parse DHT message
     var dht_msg = try DHTMessage.deserialize(std.heap.page_allocator, message.payload);
     defer dht_msg.deinit(std.heap.page_allocator);
     
+    // Find DHT instance from P2P node user_data
+    if (p2p_node.user_data) |user_data| {
+        const dht_instance: *DHT = @ptrCast(@alignCast(user_data));
+        
+        // Add sender to routing table
+        const sender_node = DHTNode{
+            .id = dht_msg.sender_id,
+            .address = try std.heap.page_allocator.dupe(u8, "127.0.0.1"),
+            .port = peer.port,
+            .last_seen = std.time.timestamp(),
+            .distance = null,
+        };
+        
+        _ = dht_instance.routing_table.addNode(sender_node) catch |err| {
+            std.debug.print("⚠️ DHT: Failed to add node to routing table: {}\n", .{err});
+            std.heap.page_allocator.free(sender_node.address);
+        };
+    }
+    
     // Send pong response
-    const pong_data = try std.fmt.allocPrint(std.heap.page_allocator, "pong:{s}:{}", .{ dht_msg.sender_id, dht_msg.timestamp });
+    const pong_data = try std.fmt.allocPrint(std.heap.page_allocator, "pong:{s}:{}", .{ std.fmt.fmtSliceHexLower(&dht_msg.sender_id), dht_msg.timestamp });
     defer std.heap.page_allocator.free(pong_data);
     
     var response_msg = try DHTMessage.init(std.heap.page_allocator, .pong, dht_msg.sender_id, dht_msg.sender_id, pong_data);
@@ -556,23 +578,45 @@ fn handleDHTPing(_: *p2p.P2PNode, peer: *p2p.PeerConnection, message: *const p2p
 }
 
 fn handleDHTPong(p2p_node: *p2p.P2PNode, peer: *p2p.PeerConnection, message: *const p2p.P2PMessage) !void {
-    _ = p2p_node;
     std.debug.print("🏓 DHT: Received pong\n", .{});
     
     // Parse DHT message
     var dht_msg = try DHTMessage.deserialize(std.heap.page_allocator, message.payload);
     defer dht_msg.deinit(std.heap.page_allocator);
     
-    // Update routing table with responding node
-    std.debug.print("✅ DHT: Pong received from {s}, updating routing table\n", .{dht_msg.sender_id});
+    // Find DHT instance from P2P node user_data
+    if (p2p_node.user_data) |user_data| {
+        const dht_instance: *DHT = @ptrCast(@alignCast(user_data));
+        
+        // Add/update sender in routing table
+        const sender_node = DHTNode{
+            .id = dht_msg.sender_id,
+            .address = try std.heap.page_allocator.dupe(u8, "127.0.0.1"),
+            .port = peer.port,
+            .last_seen = std.time.timestamp(),
+            .distance = null,
+        };
+        
+        _ = dht_instance.routing_table.addNode(sender_node) catch |err| {
+            std.debug.print("⚠️ DHT: Failed to add node to routing table: {}\n", .{err});
+            std.heap.page_allocator.free(sender_node.address);
+        };
+        
+        // Remove pending request if this was a response to our ping
+        var pending_iter = dht_instance.pending_requests.iterator();
+        while (pending_iter.next()) |entry| {
+            if (std.mem.eql(u8, &entry.value_ptr.target_id, &dht_msg.sender_id)) {
+                entry.value_ptr.deinit(dht_instance.allocator);
+                _ = dht_instance.pending_requests.remove(entry.key_ptr.*);
+                break;
+            }
+        }
+        
+        std.debug.print("✅ DHT: Pong received from {s}, routing table updated\n", .{std.fmt.fmtSliceHexLower(&dht_msg.sender_id)});
+    }
     
-    // 라우팅 테이블에 노드 정보 업데이트
-    // 실제로는 DHT 인스턴스를 통해 라우팅 테이블을 업데이트해야 함
-    
-    // 임시로 피어 연결 업데이트
+    // Update peer connection info
     peer.last_ping = std.time.timestamp();
-    
-    std.debug.print("🔄 DHT: Routing table updated with peer {s}\n", .{dht_msg.sender_id});
 }
 
 fn handleFindNode(p2p_node: *p2p.P2PNode, peer: *p2p.PeerConnection, message: *const p2p.P2PMessage) !void {
@@ -582,27 +626,71 @@ fn handleFindNode(p2p_node: *p2p.P2PNode, peer: *p2p.PeerConnection, message: *c
     var dht_msg = try DHTMessage.deserialize(std.heap.page_allocator, message.payload);
     defer dht_msg.deinit(std.heap.page_allocator);
     
-    std.debug.print("🔍 DHT: Find node request for target: {s}\n", .{dht_msg.target_id});
+    std.debug.print("🔍 DHT: Find node request for target: {s}\n", .{std.fmt.fmtSliceHexLower(&dht_msg.target_id)});
     
-    // 가까운 노드들을 찾아 반환
-    // 실제로는 K-bucket에서 target_id와 가장 가까운 노드들을 찾아야 함
-    
-    // 임시로 현재 연결된 피어들의 정보를 반환
     var peers_info = std.ArrayList(u8).init(std.heap.page_allocator);
     defer peers_info.deinit();
     
     var peer_count: u32 = 0;
-    for (p2p_node.peers.items) |existing_peer| {
-        if (peer_count > 0) {
-            try peers_info.appendSlice(",");
+    
+    // Find DHT instance and use routing table to find closest nodes
+    if (p2p_node.user_data) |user_data| {
+        const dht_instance: *DHT = @ptrCast(@alignCast(user_data));
+        
+        // Add sender to routing table
+        const sender_node = DHTNode{
+            .id = dht_msg.sender_id,
+            .address = try std.heap.page_allocator.dupe(u8, "127.0.0.1"),
+            .port = peer.port,
+            .last_seen = std.time.timestamp(),
+            .distance = null,
+        };
+        
+        _ = dht_instance.routing_table.addNode(sender_node) catch |err| {
+            std.debug.print("⚠️ DHT: Failed to add node to routing table: {}\n", .{err});
+            std.heap.page_allocator.free(sender_node.address);
+        };
+        
+        // Find closest nodes to target
+        const closest_nodes = dht_instance.routing_table.findClosestNodes(dht_msg.target_id, DHT_K) catch {
+            std.debug.print("⚠️ DHT: Failed to find closest nodes\n", .{});
+            return;
+        };
+        defer {
+            for (closest_nodes.items) |*dht_node| {
+                dht_node.deinit(std.heap.page_allocator);
+            }
+            closest_nodes.deinit();
         }
-        const peer_info = try std.fmt.allocPrint(std.heap.page_allocator, "{}", .{existing_peer.address});
-        defer std.heap.page_allocator.free(peer_info);
-        try peers_info.appendSlice(peer_info);
-        peer_count += 1;
+        
+        // Build response with closest nodes
+        for (closest_nodes.items) |closest_node| {
+            if (peer_count > 0) {
+                try peers_info.appendSlice(",");
+            }
+            const node_info = try std.fmt.allocPrint(std.heap.page_allocator, "{s}:{d}:{s}", .{ 
+                closest_node.address, 
+                closest_node.port,
+                std.fmt.fmtSliceHexLower(&closest_node.id)
+            });
+            defer std.heap.page_allocator.free(node_info);
+            try peers_info.appendSlice(node_info);
+            peer_count += 1;
+        }
+    } else {
+        // Fallback: use connected peers if no DHT instance
+        for (p2p_node.peers.items) |existing_peer| {
+            if (peer_count > 0) {
+                try peers_info.appendSlice(",");
+            }
+            const peer_info = try std.fmt.allocPrint(std.heap.page_allocator, "{}:{d}", .{ existing_peer.address, existing_peer.port });
+            defer std.heap.page_allocator.free(peer_info);
+            try peers_info.appendSlice(peer_info);
+            peer_count += 1;
+        }
     }
     
-    // Find node response 전송
+    // Send find_node response
     var response_msg = try DHTMessage.init(std.heap.page_allocator, .find_node_response, dht_msg.sender_id, dht_msg.target_id, peers_info.items);
     defer response_msg.deinit(std.heap.page_allocator);
     
@@ -617,7 +705,6 @@ fn handleFindNode(p2p_node: *p2p.P2PNode, peer: *p2p.PeerConnection, message: *c
 }
 
 fn handleFindNodeResponse(p2p_node: *p2p.P2PNode, peer: *p2p.PeerConnection, message: *const p2p.P2PMessage) !void {
-    _ = p2p_node;
     _ = peer;
     std.debug.print("📋 DHT: Received find_node response\n", .{});
     
@@ -625,34 +712,81 @@ fn handleFindNodeResponse(p2p_node: *p2p.P2PNode, peer: *p2p.PeerConnection, mes
     var dht_msg = try DHTMessage.deserialize(std.heap.page_allocator, message.payload);
     defer dht_msg.deinit(std.heap.page_allocator);
     
-    std.debug.print("📋 DHT: Received find_node response from {s}\n", .{dht_msg.sender_id});
+    std.debug.print("📋 DHT: Received find_node response from {s}\n", .{std.fmt.fmtSliceHexLower(&dht_msg.sender_id)});
     
-    // 응답으로 받은 노드 목록을 파싱하고 라우팅 테이블에 추가
-    if (dht_msg.payload.len > 0) {
-        std.debug.print("🔍 DHT: Processing node list: {s}\n", .{dht_msg.payload});
+    // Find DHT instance and update routing table
+    if (p2p_node.user_data) |user_data| {
+        const dht_instance: *DHT = @ptrCast(@alignCast(user_data));
         
-        // 쉼표로 구분된 노드 목록 파싱
-        var node_iterator = std.mem.splitAny(u8, dht_msg.payload, ",");
-        var added_nodes: u32 = 0;
-        
-        while (node_iterator.next()) |node_info| {
-            const trimmed_node = std.mem.trim(u8, node_info, " \t\n\r");
+        // Process received node list
+        if (dht_msg.payload.len > 0) {
+            std.debug.print("🔍 DHT: Processing node list: {s}\n", .{dht_msg.payload});
             
-            if (trimmed_node.len > 0) {
-                // 노드 정보를 파싱하여 연결 시도
-                // 실제로는 더 정교한 파싱이 필요
-                std.debug.print("🌐 DHT: Discovered node: {s}\n", .{trimmed_node});
+            // Parse comma-separated node list
+            var node_iterator = std.mem.splitAny(u8, dht_msg.payload, ",");
+            var added_nodes: u32 = 0;
+            
+            while (node_iterator.next()) |node_info| {
+                const trimmed_node = std.mem.trim(u8, node_info, " \t\n\r");
                 
-                // 라우팅 테이블 업데이트 (실제로는 DHT 인스턴스를 통해)
-                // 거리 계산 후 K-bucket에 추가
-                
-                added_nodes += 1;
+                if (trimmed_node.len > 0) {
+                    // Parse node info: address:port:node_id
+                    var parts = std.mem.splitAny(u8, trimmed_node, ":");
+                    const address_part = parts.next() orelse continue;
+                    const port_part = parts.next() orelse continue;
+                    const id_part = parts.next();
+                    
+                    const port = std.fmt.parseInt(u16, port_part, 10) catch continue;
+                    
+                    var new_node: DHTNode = undefined;
+                    
+                    if (id_part) |id_hex| {
+                        // Parse hex node ID
+                        if (id_hex.len == 64) { // 32 bytes * 2 hex chars
+                            var node_id: NodeId = undefined;
+                            _ = std.fmt.hexToBytes(&node_id, id_hex) catch continue;
+                            
+                            new_node = DHTNode{
+                                .id = node_id,
+                                .address = try std.heap.page_allocator.dupe(u8, address_part),
+                                .port = port,
+                                .last_seen = std.time.timestamp(),
+                                .distance = null,
+                            };
+                        } else {
+                            continue;
+                        }
+                    } else {
+                        // Generate ID from address:port
+                        new_node = DHTNode.init(std.heap.page_allocator, address_part, port) catch continue;
+                    }
+                    
+                    // Add to routing table
+                    _ = dht_instance.routing_table.addNode(new_node) catch |err| {
+                        std.debug.print("⚠️ DHT: Failed to add discovered node: {}\n", .{err});
+                        new_node.deinit(std.heap.page_allocator);
+                        continue;
+                    };
+                    
+                    std.debug.print("🌐 DHT: Added discovered node: {s}:{d}\n", .{ new_node.address, new_node.port });
+                    added_nodes += 1;
+                }
             }
+            
+            std.debug.print("✅ DHT: Added {} nodes to routing table\n", .{added_nodes});
+        } else {
+            std.debug.print("⚠️  DHT: Empty node list received\n", .{});
         }
         
-        std.debug.print("✅ DHT: Added {} nodes to routing table\n", .{added_nodes});
-    } else {
-        std.debug.print("⚠️  DHT: Empty node list received\n", .{});
+        // Remove corresponding pending request
+        var pending_iter = dht_instance.pending_requests.iterator();
+        while (pending_iter.next()) |entry| {
+            if (std.mem.eql(u8, &entry.value_ptr.target_id, &dht_msg.target_id)) {
+                entry.value_ptr.deinit(dht_instance.allocator);
+                _ = dht_instance.pending_requests.remove(entry.key_ptr.*);
+                break;
+            }
+        }
     }
 }
 

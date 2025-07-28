@@ -273,14 +273,99 @@ fn scanWorker(context: WorkerContext) void {
     }
 }
 
-/// 네트워크 인터페이스 정보 구조체
+/// 네트워크 인터페이스 정보 구조체 (IPv4/IPv6 지원)
 const NetworkInterface = struct {
     name: []const u8,
-    ip: [4]u8,
+    ipv4: ?[4]u8,
+    ipv6: ?[16]u8,
     is_active: bool,
     is_wifi: bool,
     is_ethernet: bool,
+    is_loopback: bool,
+    interface_type: InterfaceType,
+    
+    const InterfaceType = enum {
+        ethernet,
+        wifi,
+        loopback,
+        vpn,
+        cellular,
+        unknown,
+    };
+    
+    pub fn deinit(self: *NetworkInterface, allocator: std.mem.Allocator) void {
+        allocator.free(self.name);
+    }
+    
+    pub fn hasIPv4(self: *const NetworkInterface) bool {
+        return self.ipv4 != null;
+    }
+    
+    pub fn hasIPv6(self: *const NetworkInterface) bool {
+        return self.ipv6 != null;
+    }
+    
+    pub fn getIPv4String(self: *const NetworkInterface, allocator: std.mem.Allocator) !?[]u8 {
+        if (self.ipv4) |ip| {
+            return try std.fmt.allocPrint(allocator, "{}.{}.{}.{}", .{ ip[0], ip[1], ip[2], ip[3] });
+        }
+        return null;
+    }
+    
+    pub fn getIPv6String(self: *const NetworkInterface, allocator: std.mem.Allocator) !?[]u8 {
+        if (self.ipv6) |ip| {
+            return try std.fmt.allocPrint(allocator, "{X:02}{X:02}:{X:02}{X:02}:{X:02}{X:02}:{X:02}{X:02}:{X:02}{X:02}:{X:02}{X:02}:{X:02}{X:02}:{X:02}{X:02}", .{
+                ip[0], ip[1], ip[2], ip[3], ip[4], ip[5], ip[6], ip[7],
+                ip[8], ip[9], ip[10], ip[11], ip[12], ip[13], ip[14], ip[15],
+            });
+        }
+        return null;
+    }
 };
+
+/// IPv6 주소 파싱 함수
+fn parseIPv6Address(ip_str: []const u8) ?[16]u8 {
+    // 간단한 IPv6 주소 파싱 (완전한 형태만 지원)
+    // 예: 2001:0db8:85a3:0000:0000:8a2e:0370:7334
+    if (ip_str.len < 7) return null; // 최소 길이 체크
+    
+    var result: [16]u8 = std.mem.zeroes([16]u8);
+    var groups = std.mem.splitAny(u8, ip_str, ":");
+    var group_count: usize = 0;
+    
+    while (groups.next()) |group| {
+        if (group_count >= 8) break; // 최대 8개 그룹
+        
+        const parsed = std.fmt.parseInt(u16, group, 16) catch return null;
+        const byte_index = group_count * 2;
+        if (byte_index + 1 >= result.len) break;
+        
+        result[byte_index] = @intCast((parsed >> 8) & 0xFF);
+        result[byte_index + 1] = @intCast(parsed & 0xFF);
+        group_count += 1;
+    }
+    
+    if (group_count > 0) {
+        return result;
+    }
+    return null;
+}
+
+/// 인터페이스 타입을 이름으로부터 추론
+fn inferInterfaceType(name: []const u8) NetworkInterface.InterfaceType {
+    if (std.mem.eql(u8, name, "lo") or std.mem.eql(u8, name, "lo0")) {
+        return .loopback;
+    } else if (std.mem.startsWith(u8, name, "en0")) {
+        return .ethernet;
+    } else if (std.mem.startsWith(u8, name, "en") or std.mem.startsWith(u8, name, "wl")) {
+        return .wifi;
+    } else if (std.mem.startsWith(u8, name, "ppp") or std.mem.startsWith(u8, name, "tun") or std.mem.startsWith(u8, name, "tap")) {
+        return .vpn;
+    } else if (std.mem.startsWith(u8, name, "cell") or std.mem.startsWith(u8, name, "pdp")) {
+        return .cellular;
+    }
+    return .unknown;
+}
 
 /// 모든 네트워크 인터페이스를 감지하는 함수
 fn detectAllNetworkInterfaces(allocator: Allocator) !std.ArrayList(NetworkInterface) {
@@ -303,7 +388,8 @@ fn detectAllNetworkInterfaces(allocator: Allocator) !std.ArrayList(NetworkInterf
     }
     
     var current_interface: ?[]const u8 = null;
-    var current_ip: ?[4]u8 = null;
+    var current_ipv4: ?[4]u8 = null;
+    var current_ipv6: ?[16]u8 = null;
     var is_active = false;
     
     var lines = std.mem.splitAny(u8, ifconfig_result.stdout, "\n");
@@ -314,13 +400,17 @@ fn detectAllNetworkInterfaces(allocator: Allocator) !std.ArrayList(NetworkInterf
         if (trimmed.len > 0 and line[0] != ' ' and line[0] != '\t') {
             // 이전 인터페이스 저장
             if (current_interface) |iface| {
-                if (current_ip) |ip| {
+                if (current_ipv4 != null or current_ipv6 != null) {
+                    const iface_type = inferInterfaceType(iface);
                     try interfaces.append(NetworkInterface{
                         .name = try allocator.dupe(u8, iface),
-                        .ip = ip,
+                        .ipv4 = current_ipv4,
+                        .ipv6 = current_ipv6,
                         .is_active = is_active,
-                        .is_wifi = std.mem.startsWith(u8, iface, "en") and !std.mem.startsWith(u8, iface, "en0"),
-                        .is_ethernet = std.mem.startsWith(u8, iface, "en0"),
+                        .is_wifi = iface_type == .wifi,
+                        .is_ethernet = iface_type == .ethernet,
+                        .is_loopback = iface_type == .loopback,
+                        .interface_type = iface_type,
                     });
                 }
             }
@@ -329,17 +419,35 @@ fn detectAllNetworkInterfaces(allocator: Allocator) !std.ArrayList(NetworkInterf
             var parts = std.mem.splitAny(u8, trimmed, ":");
             if (parts.next()) |iface_name| {
                 current_interface = std.mem.trim(u8, iface_name, " \t");
-                current_ip = null;
+                current_ipv4 = null;
+                current_ipv6 = null;
                 is_active = false;
             }
         }
-        // IP 주소 라인 파싱
+        // IPv4 주소 라인 파싱
         else if (std.mem.indexOf(u8, trimmed, "inet ")) |_| {
             var inet_parts = std.mem.splitAny(u8, trimmed, " ");
             while (inet_parts.next()) |part| {
                 if (std.mem.eql(u8, part, "inet")) {
                     if (inet_parts.next()) |ip_str| {
-                        current_ip = parseIPAddress(ip_str);
+                        current_ipv4 = parseIPAddress(ip_str);
+                        break;
+                    }
+                }
+            }
+        }
+        // IPv6 주소 라인 파싱
+        else if (std.mem.indexOf(u8, trimmed, "inet6 ")) |_| {
+            var inet6_parts = std.mem.splitAny(u8, trimmed, " ");
+            while (inet6_parts.next()) |part| {
+                if (std.mem.eql(u8, part, "inet6")) {
+                    if (inet6_parts.next()) |ip_str| {
+                        // IPv6 주소에서 스코프 제거 (예: fe80::1%lo0 -> fe80::1)
+                        const clean_ip = if (std.mem.indexOf(u8, ip_str, "%")) |scope_pos| 
+                            ip_str[0..scope_pos] 
+                        else 
+                            ip_str;
+                        current_ipv6 = parseIPv6Address(clean_ip);
                         break;
                     }
                 }
@@ -353,13 +461,17 @@ fn detectAllNetworkInterfaces(allocator: Allocator) !std.ArrayList(NetworkInterf
     
     // 마지막 인터페이스 처리
     if (current_interface) |iface| {
-        if (current_ip) |ip| {
+        if (current_ipv4 != null or current_ipv6 != null) {
+            const iface_type = inferInterfaceType(iface);
             try interfaces.append(NetworkInterface{
                 .name = try allocator.dupe(u8, iface),
-                .ip = ip,
+                .ipv4 = current_ipv4,
+                .ipv6 = current_ipv6,
                 .is_active = is_active,
-                .is_wifi = std.mem.startsWith(u8, iface, "en") and !std.mem.startsWith(u8, iface, "en0"),
-                .is_ethernet = std.mem.startsWith(u8, iface, "en0"),
+                .is_wifi = iface_type == .wifi,
+                .is_ethernet = iface_type == .ethernet,
+                .is_loopback = iface_type == .loopback,
+                .interface_type = iface_type,
             });
         }
     }
@@ -384,14 +496,17 @@ fn parseIPAddress(ip_str: []const u8) ?[4]u8 {
 
 /// 최적의 네트워크 인터페이스 선택
 fn selectBestInterface(interfaces: []const NetworkInterface) ?NetworkInterface {
-    // 우선순위: 활성 상태 > 이더넷 > WiFi > 기타
+    // 우선순위: 활성 상태 > 이더넷 > WiFi > 기타 (IPv4 우선)
     var best_interface: ?NetworkInterface = null;
     
     for (interfaces) |iface| {
         if (!iface.is_active) continue;
         
+        // IPv4 주소가 있어야 함
+        const ipv4 = iface.ipv4 orelse continue;
+        
         // 루프백 주소 제외
-        if (iface.ip[0] == 127) continue;
+        if (ipv4[0] == 127) continue;
         
         if (best_interface == null) {
             best_interface = iface;
@@ -401,13 +516,13 @@ fn selectBestInterface(interfaces: []const NetworkInterface) ?NetworkInterface {
         const current_best = best_interface.?;
         
         // 이더넷이 WiFi보다 우선
-        if (iface.is_ethernet and !current_best.is_ethernet) {
+        if (iface.interface_type == .ethernet and current_best.interface_type != .ethernet) {
             best_interface = iface;
             continue;
         }
         
         // WiFi가 기타보다 우선
-        if (iface.is_wifi and !current_best.is_wifi and !current_best.is_ethernet) {
+        if (iface.interface_type == .wifi and current_best.interface_type != .wifi and current_best.interface_type != .ethernet) {
             best_interface = iface;
         }
     }
@@ -433,19 +548,38 @@ fn detectLocalIP(allocator: Allocator) ![4]u8 {
     
     std.debug.print("📊 Found {} network interfaces:\n", .{interfaces.items.len});
     for (interfaces.items) |iface| {
-        const type_str = if (iface.is_ethernet) "Ethernet" else if (iface.is_wifi) "WiFi" else "Other";
+        const type_str = switch (iface.interface_type) {
+            .ethernet => "Ethernet",
+            .wifi => "WiFi", 
+            .loopback => "Loopback",
+            .vpn => "VPN",
+            .cellular => "Cellular",
+            .unknown => "Unknown",
+        };
         const status_str = if (iface.is_active) "Active" else "Inactive";
-        std.debug.print("  - {s}: {}.{}.{}.{} ({s}, {s})\n", .{ 
-            iface.name, iface.ip[0], iface.ip[1], iface.ip[2], iface.ip[3], type_str, status_str 
-        });
+        
+        if (iface.ipv4) |ipv4| {
+            std.debug.print("  - {s}: {}.{}.{}.{} (IPv4, {s}, {s})\n", .{ 
+                iface.name, ipv4[0], ipv4[1], ipv4[2], ipv4[3], type_str, status_str 
+            });
+        }
+        
+        if (iface.ipv6) |ipv6| {
+            std.debug.print("  - {s}: {X:02}{X:02}:{X:02}{X:02}:{X:02}{X:02}:{X:02}{X:02}:{X:02}{X:02}:{X:02}{X:02}:{X:02}{X:02}:{X:02}{X:02} (IPv6, {s}, {s})\n", .{ 
+                iface.name, ipv6[0], ipv6[1], ipv6[2], ipv6[3], ipv6[4], ipv6[5], ipv6[6], ipv6[7],
+                ipv6[8], ipv6[9], ipv6[10], ipv6[11], ipv6[12], ipv6[13], ipv6[14], ipv6[15], type_str, status_str 
+            });
+        }
     }
     
     // 최적의 인터페이스 선택
     if (selectBestInterface(interfaces.items)) |best| {
-        std.debug.print("✅ Selected interface: {s} - {}.{}.{}.{}\n", .{ 
-            best.name, best.ip[0], best.ip[1], best.ip[2], best.ip[3] 
-        });
-        return best.ip;
+        if (best.ipv4) |ipv4| {
+            std.debug.print("✅ Selected interface: {s} - {}.{}.{}.{}\n", .{ 
+                best.name, ipv4[0], ipv4[1], ipv4[2], ipv4[3] 
+            });
+            return ipv4;
+        }
     }
     
     std.debug.print("⚠️  No suitable network interface found, using fallback IP\n", .{});

@@ -108,6 +108,7 @@ pub const P2PMessage = struct {
 pub const PeerConnection = struct {
     stream: net.Stream,
     address: net.Address,
+    port: u16,
     id: [32]u8,
     connected: bool,
     last_ping: i64,
@@ -117,9 +118,16 @@ pub const PeerConnection = struct {
         var id: [32]u8 = undefined;
         std.crypto.random.bytes(&id);
         
+        const port = switch (address.any.family) {
+            std.posix.AF.INET => address.in.getPort(),
+            std.posix.AF.INET6 => address.in6.getPort(),
+            else => 0,
+        };
+        
         return PeerConnection{
             .stream = stream,
             .address = address,
+            .port = port,
             .id = id,
             .connected = true,
             .last_ping = std.time.timestamp(),
@@ -190,6 +198,7 @@ pub const P2PNode = struct {
     running: bool,
     message_handlers: std.HashMap(u8, *const fn(*P2PNode, *PeerConnection, *const P2PMessage) anyerror!void, std.hash_map.AutoContext(u8), 80),
     blockchain_ref: ?*blockchain.Blockchain, // 블록체인 참조 추가
+    user_data: ?*anyopaque, // DHT나 다른 컴포넌트를 위한 사용자 데이터
 
     pub fn init(allocator: std.mem.Allocator, port: u16) !P2PNode {
         var node_id: [32]u8 = undefined;
@@ -206,6 +215,7 @@ pub const P2PNode = struct {
             .running = false,
             .message_handlers = std.HashMap(u8, *const fn(*P2PNode, *PeerConnection, *const P2PMessage) anyerror!void, std.hash_map.AutoContext(u8), 80).init(allocator),
             .blockchain_ref = null, // 초기에는 null
+            .user_data = null, // 초기에는 null
         };
     }
 

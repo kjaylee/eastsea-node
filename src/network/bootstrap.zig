@@ -472,6 +472,67 @@ pub const BootstrapServer = struct {
 };
 
 // Message handlers
+// Helper function for connecting to peer with retry mechanism
+fn connectToPeerWithRetry(p2p_node: *p2p.P2PNode, peer_info_str: []const u8) !u32 {
+    // 피어 정보가 "address:port" 형태라고 가정
+    if (std.mem.indexOf(u8, peer_info_str, ":")) |colon_pos| {
+        const address = peer_info_str[0..colon_pos];
+        const port_str = peer_info_str[colon_pos + 1..];
+        
+        if (std.fmt.parseInt(u16, port_str, 10)) |peer_port| {
+            std.debug.print("🌐 Attempting to connect to peer: {s}:{}\n", .{ address, peer_port });
+            
+            // 피어에 연결 시도 (재시도 메커니즘 포함)
+            const peer_address = std.net.Address.parseIp4(address, peer_port) catch {
+                std.debug.print("❌ Invalid peer address: {s}:{}\n", .{ address, peer_port });
+                return 0;
+            };
+            
+            // 이미 연결된 피어인지 확인
+            var already_connected = false;
+            for (p2p_node.peers.items) |existing_peer| {
+                if (std.net.Address.eql(existing_peer.address, peer_address)) {
+                    already_connected = true;
+                    std.debug.print("ℹ️  Already connected to peer: {s}:{}\n", .{ address, peer_port });
+                    break;
+                }
+            }
+            
+            if (!already_connected) {
+                // 연결 재시도 (최대 3회)
+                var connect_success = false;
+                var retry_count: u8 = 0;
+                const max_retries: u8 = 3;
+                
+                while (retry_count < max_retries and !connect_success) {
+                    if (retry_count > 0) {
+                        std.debug.print("🔄 Retrying connection to {s}:{} (attempt {})\n", .{ address, peer_port, retry_count + 1 });
+                        std.time.sleep(1000000000); // 1 second delay
+                    }
+                    
+                    _ = p2p_node.connectToPeer(peer_address) catch |err| {
+                        retry_count += 1;
+                        if (retry_count >= max_retries) {
+                            std.debug.print("❌ Failed to connect to peer {s}:{} after {} attempts: {}\n", .{ address, peer_port, max_retries, err });
+                        }
+                        continue;
+                    };
+                    
+                    connect_success = true;
+                    std.debug.print("✅ Connected to peer: {s}:{}\n", .{ address, peer_port });
+                    return 1; // Successfully connected
+                }
+            }
+        } else |_| {
+            std.debug.print("❌ Invalid port number: {s}\n", .{port_str});
+        }
+    } else {
+        std.debug.print("❌ Invalid peer format: {s}\n", .{peer_info_str});
+    }
+    
+    return 0; // Failed to connect
+}
+
 fn handleBootstrapRequest(p2p_node: *p2p.P2PNode, peer: *p2p.PeerConnection, message: *const p2p.P2PMessage) !void {
     _ = peer;
     std.debug.print("🔗 Bootstrap: Received bootstrap request\n", .{});
@@ -552,45 +613,30 @@ fn handlePeerListResponse(p2p_node: *p2p.P2PNode, peer: *p2p.PeerConnection, mes
     
     // 피어 목록 파싱 및 새로운 피어에 연결
     if (bootstrap_msg.payload.len > 0) {
-        // JSON 형태의 피어 목록을 파싱 (단순화된 예시)
-        // 실제로는 JSON 파서를 사용해야 함
+        std.debug.print("🔍 Parsing peer list: {s}\n", .{bootstrap_msg.payload});
         
-        std.debug.print("🔍 Parsing peer list...\n", .{});
-        
-        // 임시로 쉼표로 구분된 형태로 파싱
-        var peer_iterator = std.mem.splitAny(u8, bootstrap_msg.payload, ",");
         var peer_count: u32 = 0;
         
-        while (peer_iterator.next()) |peer_info| {
-            const trimmed_peer = std.mem.trim(u8, peer_info, " \t\n\r");
+        // JSON 형식 지원 (간단한 형태)
+        if (std.mem.startsWith(u8, bootstrap_msg.payload, "[") and std.mem.endsWith(u8, bootstrap_msg.payload, "]")) {
+            // JSON 배열 형태: ["127.0.0.1:8001", "127.0.0.1:8002"]
+            const payload_content = bootstrap_msg.payload[1..bootstrap_msg.payload.len-1]; // [ ] 제거
+            var peer_iterator = std.mem.splitAny(u8, payload_content, ",");
             
-            if (trimmed_peer.len > 0) {
-                // 피어 정보가 "address:port" 형태라고 가정
-                if (std.mem.indexOf(u8, trimmed_peer, ":")) |colon_pos| {
-                    const address = trimmed_peer[0..colon_pos];
-                    const port_str = trimmed_peer[colon_pos + 1..];
-                    
-                    if (std.fmt.parseInt(u16, port_str, 10)) |peer_port| {
-                        std.debug.print("🌐 Attempting to connect to peer: {s}:{}\n", .{ address, peer_port });
-                        
-                        // 피어에 연결 시도
-                        const peer_address = std.net.Address.parseIp4(address, peer_port) catch {
-                            std.debug.print("❌ Invalid peer address: {s}:{}\n", .{ address, peer_port });
-                            continue;
-                        };
-                        
-                        _ = p2p_node.connectToPeer(peer_address) catch |err| {
-                            std.debug.print("❌ Failed to connect to peer {s}:{}: {}\n", .{ address, peer_port, err });
-                            continue;
-                        };
-                        
-                        peer_count += 1;
-                        std.debug.print("✅ Connected to peer: {s}:{}\n", .{ address, peer_port });
-                    } else |_| {
-                        std.debug.print("❌ Invalid port number: {s}\n", .{port_str});
-                    }
-                } else {
-                    std.debug.print("❌ Invalid peer format: {s}\n", .{trimmed_peer});
+            while (peer_iterator.next()) |peer_entry| {
+                const trimmed_entry = std.mem.trim(u8, peer_entry, " \t\n\r\""); // 따옴표도 제거
+                if (trimmed_entry.len > 0) {
+                    peer_count += try connectToPeerWithRetry(p2p_node, trimmed_entry);
+                }
+            }
+        } else {
+            // 쉼표로 구분된 단순 형태: 127.0.0.1:8001,127.0.0.1:8002
+            var peer_iterator = std.mem.splitAny(u8, bootstrap_msg.payload, ",");
+            
+            while (peer_iterator.next()) |peer_info| {
+                const trimmed_peer = std.mem.trim(u8, peer_info, " \t\n\r");
+                if (trimmed_peer.len > 0) {
+                    peer_count += try connectToPeerWithRetry(p2p_node, trimmed_peer);
                 }
             }
         }
@@ -628,12 +674,28 @@ fn handleNodeAnnouncement(p2p_node: *p2p.P2PNode, peer: *p2p.PeerConnection, mes
     if (!already_connected) {
         std.debug.print("🌐 Connecting to announced node: {s}:{}\n", .{ bootstrap_msg.sender_address, bootstrap_msg.sender_port });
         
-        _ = p2p_node.connectToPeer(announced_address) catch |err| {
-            std.debug.print("❌ Failed to connect to announced node: {}\n", .{err});
-            return;
-        };
+        // 연결 재시도 메커니즘 (최대 2회)
+        var connect_success = false;
+        var retry_count: u8 = 0;
+        const max_retries: u8 = 2;
         
-        std.debug.print("✅ Successfully connected to announced node\n", .{});
+        while (retry_count < max_retries and !connect_success) {
+            if (retry_count > 0) {
+                std.debug.print("🔄 Retrying connection to announced node (attempt {})\n", .{retry_count + 1});
+                std.time.sleep(500000000); // 0.5 second delay
+            }
+            
+            _ = p2p_node.connectToPeer(announced_address) catch |err| {
+                retry_count += 1;
+                if (retry_count >= max_retries) {
+                    std.debug.print("❌ Failed to connect to announced node after {} attempts: {}\n", .{ max_retries, err });
+                }
+                continue;
+            };
+            
+            connect_success = true;
+            std.debug.print("✅ Successfully connected to announced node\n", .{});
+        }
     } else {
         std.debug.print("ℹ️  Already connected to announced node\n", .{});
     }
