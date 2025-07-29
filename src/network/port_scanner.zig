@@ -288,20 +288,9 @@ fn scanWorker(context: WorkerContext) void {
             // 에러는 조용히 무시 (연결 실패는 정상적인 상황)
         };
         
-        // 진행률 업데이트
-        const completed = @atomicRmw(u32, context.completed_tasks, .Add, 1, .monotonic) + 1;
-        if (completed % 50 == 0 or completed == context.total_tasks) {
-            print("📊 Scan progress: {}/{}\n", .{ completed, context.total_tasks });
-        }
+        // 진행률 업데이트 - disable printing from worker threads to prevent concurrency issues
+        _ = @atomicRmw(u32, context.completed_tasks, .Add, 1, .monotonic);
     }
-    
-    // 워커 스레드 완료 알림
-    context.mutex.lock();
-    context.finished_workers.* += 1;
-    if (context.finished_workers.* == context.worker_count) {
-        context.cond.signal();
-    }
-    context.mutex.unlock();
 }
 
 /// 네트워크 인터페이스 정보 구조체 (IPv4/IPv6 지원)
