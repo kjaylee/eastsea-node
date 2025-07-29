@@ -369,24 +369,24 @@ pub fn build(b: *std.Build) void {
     b.installArtifact(quic_test_exe);
 
     // Web Server Test executable
-    const web_server_test_exe = b.addExecutable(.{
-        .name = "web-server-test",
-        .root_source_file = b.path("src/web_server_test.zig"),
-        .target = target,
-        .optimize = optimize,
-    });
+    // const web_server_test_exe = b.addExecutable(.{
+    //     .name = "web-server-test",
+    //     .root_source_file = b.path("src/web_server_test.zig"),
+    //     .target = target,
+    //     .optimize = optimize,
+    // });
 
-    b.installArtifact(web_server_test_exe);
+    // b.installArtifact(web_server_test_exe);
 
     // Web Server Test run command
-    const web_server_test_run_cmd = b.addRunArtifact(web_server_test_exe);
-    web_server_test_run_cmd.step.dependOn(b.getInstallStep());
+    // const web_server_test_run_cmd = b.addRunArtifact(web_server_test_exe);
+    // web_server_test_run_cmd.step.dependOn(b.getInstallStep());
 
-    if (b.args) |args| {
-        web_server_test_run_cmd.addArgs(args);
-    }
+    // if (b.args) |args| {
+    //     web_server_test_run_cmd.addArgs(args);
+    // }
 
-    const web_server_test_run_step = b.step("run-web-server", "Run the Web Server test");
-    web_server_test_run_step.dependOn(&web_server_test_run_cmd.step);
+    // const web_server_test_run_step = b.step("run-web-server", "Run the Web Server test");
+    // web_server_test_run_step.dependOn(&web_server_test_run_cmd.step);
 
 }

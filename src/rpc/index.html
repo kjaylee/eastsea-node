@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Eastsea Blockchain Dashboard</title>
+    <style>
+        :root {
+            --primary-color: #2563eb;
+            --secondary-color: #1e40af;
+            --background-color: #f8fafc;
+            --card-color: #ffffff;
+            --text-color: #1e293b;
+            --border-color: #e2e8f0;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: var(--background-color);
+            color: var(--text-color);
+        }
+        
+        header {
+            background-color: var(--primary-color);
+            color: white;
+            padding: 1rem;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 1rem;
+        }
+        
+        .card {
+            background-color: var(--card-color);
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+        
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1.5rem;
+        }
+        
+        h1, h2, h3 {
+            margin-top: 0;
+        }
+        
+        .status-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background-color: #10b981;
+            margin-right: 0.5rem;
+        }
+        
+        .metric {
+            display: flex;
+            justify-content: space-between;
+            padding: 0.5rem 0;
+            border-bottom: 1px solid var(--border-color);
+        }
+        
+        .metric:last-child {
+            border-bottom: none;
+        }
+        
+        .btn {
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: 500;
+        }
+        
+        .btn:hover {
+            background-color: var(--secondary-color);
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        
+        th, td {
+            text-align: left;
+            padding: 0.75rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+        
+        th {
+            font-weight: 600;
+            color: var(--secondary-color);
+        }
+        
+        .hash {
+            font-family: monospace;
+            font-size: 0.875rem;
+        }
+        
+        .tabs {
+            display: flex;
+            border-bottom: 1px solid var(--border-color);
+            margin-bottom: 1rem;
+        }
+        
+        .tab {
+            padding: 0.75rem 1.5rem;
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+        }
+        
+        .tab.active {
+            border-bottom: 2px solid var(--primary-color);
+            color: var(--primary-color);
+            font-weight: 500;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="container">
+            <h1>🌊 Eastsea Blockchain Dashboard</h1>
+            <p>Real-time monitoring of your Eastsea node</p>
+        </div>
+    </header>
+    
+    <div class="container">
+        <div class="card">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <h2>Node Status <span class="status-indicator"></span> Online</h2>
+                <button class="btn" onclick="refreshData()">Refresh</button>
+            </div>
+            
+            <div class="grid">
+                <div>
+                    <h3>Network Metrics</h3>
+                    <div class="metric">
+                        <span>Peers Connected</span>
+                        <span id="peerCount">0</span>
+                    </div>
+                    <div class="metric">
+                        <span>Block Height</span>
+                        <span id="blockHeight">0</span>
+                    </div>
+                    <div class="metric">
+                        <span>TPS (Last 10 blocks)</span>
+                        <span id="tps">0</span>
+                    </div>
+                </div>
+                
+                <div>
+                    <h3>Node Information</h3>
+                    <div class="metric">
+                        <span>Node ID</span>
+                        <span class="hash" id="nodeId">N/A</span>
+                    </div>
+                    <div class="metric">
+                        <span>Version</span>
+                        <span id="version">0.1.0</span>
+                    </div>
+                    <div class="metric">
+                        <span>Uptime</span>
+                        <span id="uptime">0s</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="tabs">
+            <div class="tab active" onclick="switchTab('blocks')">Blocks</div>
+            <div class="tab" onclick="switchTab('transactions')">Transactions</div>
+            <div class="tab" onclick="switchTab('peers')">Peers</div>
+        </div>
+        
+        <div id="blocks-tab" class="card">
+            <h2>Recent Blocks</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Height</th>
+                        <th>Hash</th>
+                        <th>Timestamp</th>
+                        <th>Transactions</th>
+                    </tr>
+                </thead>
+                <tbody id="blocks-table">
+                    <tr>
+                        <td colspan="4" style="text-align: center;">Loading...</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        
+        <div id="transactions-tab" class="card" style="display: none;">
+            <h2>Recent Transactions</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Hash</th>
+                        <th>From</th>
+                        <th>To</th>
+                        <th>Amount</th>
+                        <th>Timestamp</th>
+                    </tr>
+                </thead>
+                <tbody id="transactions-table">
+                    <tr>
+                        <td colspan="5" style="text-align: center;">Loading...</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        
+        <div id="peers-tab" class="card" style="display: none;">
+            <h2>Connected Peers</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Node ID</th>
+                        <th>Address</th>
+                        <th>Status</th>
+                        <th>Last Seen</th>
+                    </tr>
+                </thead>
+                <tbody id="peers-table">
+                    <tr>
+                        <td colspan="4" style="text-align: center;">Loading...</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+    
+    <script>
+        // Mock data for demonstration
+        const mockData = {
+            status: {
+                peerCount: 12,
+                blockHeight: 1245,
+                tps: 124.5,
+                nodeId: "node_7f8e3a9b4c5d6e2f1a0b8c9d7e6f5a4b3c2d1e0f",
+                version: "0.1.0",
+                uptime: "2h 15m"
+            },
+            blocks: [
+                { height: 1245, hash: "a1b2c3d4e5f67890abcdef1234567890abcdef1234567890abcdef12", timestamp: "2025-07-29 14:30:25", transactions: 42 },
+                { height: 1244, hash: "f0e9d8c7b6a594837261504321098765432109876543210987654321", timestamp: "2025-07-29 14:30:18", transactions: 38 },
+                { height: 1243, hash: "1029384756aebfcd0987654321fedcba987654321098765432109876", timestamp: "2025-07-29 14:30:12", transactions: 51 },
+                { height: 1242, hash: "c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b3c4d5e6f7", timestamp: "2025-07-29 14:30:05", transactions: 29 },
+                { height: 1241, hash: "9f8e7d6c5b4a3f2e1d0c9b8a7f6e5d4c3b2a1f0e9d8c7b6a5f4e3d2c", timestamp: "2025-07-29 14:29:58", transactions: 47 }
+            ],
+            transactions: [
+                { hash: "t1a2b3c4d5e6f7890abcdef1234567890abcdef1234567890abcdef", from: "acc_1234", to: "acc_5678", amount: "12.5", timestamp: "2025-07-29 14:30:24" },
+                { hash: "t2b3c4d5e6f7890a1bcdef234567890abcdef1234567890abcdef12", from: "acc_9012", to: "acc_3456", amount: "8.75", timestamp: "2025-07-29 14:30:22" },
+                { hash: "t3c4d5e6f7890ab12cdef34567890abcdef1234567890abcdef1234", from: "acc_5678", to: "acc_9012", amount: "25.0", timestamp: "2025-07-29 14:30:20" },
+                { hash: "t4d5e6f7890abc123def4567890abcdef1234567890abcdef123456", from: "acc_3456", to: "acc_1234", amount: "5.25", timestamp: "2025-07-29 14:30:18" },
+                { hash: "t5e6f7890abcd1234ef567890abcdef1234567890abcdef12345678", from: "acc_7890", to: "acc_2345", amount: "18.0", timestamp: "2025-07-29 14:30:15" }
+            ],
+            peers: [
+                { nodeId: "node_a1b2c3d4e5f6", address: "192.168.1.10:8000", status: "Connected", lastSeen: "Just now" },
+                { nodeId: "node_f0e9d8c7b6a5", address: "10.0.0.5:8000", status: "Connected", lastSeen: "2s ago" },
+                { nodeId: "node_1029384756ae", address: "172.16.0.8:8000", status: "Connected", lastSeen: "5s ago" },
+                { nodeId: "node_c0d1e2f3a4b5", address: "192.168.1.15:8000", status: "Connected", lastSeen: "10s ago" },
+                { nodeId: "node_9f8e7d6c5b4a", address: "10.0.0.12:8000", status: "Connected", lastSeen: "15s ago" }
+            ]
+        };
+        
+        // Initialize the dashboard
+        function initDashboard() {
+            updateStatus();
+            updateBlocks();
+            updateTransactions();
+            updatePeers();
+        }
+        
+        // Update status information
+        function updateStatus() {
+            const status = mockData.status;
+            document.getElementById('peerCount').textContent = status.peerCount;
+            document.getElementById('blockHeight').textContent = status.blockHeight;
+            document.getElementById('tps').textContent = status.tps;
+            document.getElementById('nodeId').textContent = status.nodeId;
+            document.getElementById('version').textContent = status.version;
+            document.getElementById('uptime').textContent = status.uptime;
+        }
+        
+        // Update blocks table
+        function updateBlocks() {
+            const tableBody = document.getElementById('blocks-table');
+            tableBody.innerHTML = '';
+            
+            mockData.blocks.forEach(block => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${block.height}</td>
+                    <td class="hash">${block.hash.substring(0, 12)}...</td>
+                    <td>${block.timestamp}</td>
+                    <td>${block.transactions}</td>
+                `;
+                tableBody.appendChild(row);
+            });
+        }
+        
+        // Update transactions table
+        function updateTransactions() {
+            const tableBody = document.getElementById('transactions-table');
+            tableBody.innerHTML = '';
+            
+            mockData.transactions.forEach(tx => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td class="hash">${tx.hash.substring(0, 12)}...</td>
+                    <td class="hash">${tx.from}</td>
+                    <td class="hash">${tx.to}</td>
+                    <td>${tx.amount} EAS</td>
+                    <td>${tx.timestamp}</td>
+                `;
+                tableBody.appendChild(row);
+            });
+        }
+        
+        // Update peers table
+        function updatePeers() {
+            const tableBody = document.getElementById('peers-table');
+            tableBody.innerHTML = '';
+            
+            mockData.peers.forEach(peer => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td class="hash">${peer.nodeId}</td>
+                    <td>${peer.address}</td>
+                    <td>${peer.status}</td>
+                    <td>${peer.lastSeen}</td>
+                `;
+                tableBody.appendChild(row);
+            });
+        }
+        
+        // Refresh all data
+        function refreshData() {
+            // In a real implementation, this would fetch data from the API
+            initDashboard();
+            
+            // Show a temporary message
+            const btn = document.querySelector('.btn');
+            const originalText = btn.textContent;
+            btn.textContent = 'Refreshing...';
+            setTimeout(() => {
+                btn.textContent = originalText;
+            }, 1000);
+        }
+        
+        // Switch between tabs
+        function switchTab(tabName) {
+            // Hide all tabs
+            document.getElementById('blocks-tab').style.display = 'none';
+            document.getElementById('transactions-tab').style.display = 'none';
+            document.getElementById('peers-tab').style.display = 'none';
+            
+            // Show selected tab
+            document.getElementById(tabName + '-tab').style.display = 'block';
+            
+            // Update active tab
+            document.querySelectorAll('.tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            event.target.classList.add('active');
+        }
+        
+        // Initialize when page loads
+        document.addEventListener('DOMContentLoaded', initDashboard);
+    </script>
+</body>
+</html>
