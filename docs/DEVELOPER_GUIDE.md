@@ -15,15 +15,15 @@
 
 ## Project Overview
 
-Eastsea는 Zig 언어로 구현된 블록체인 클론으로, 다음과 같은 주요 특징을 가집니다:
+Eastsea is a blockchain implementation written in the Zig programming language with the following key features:
 
-- **Proof of History (PoH) 합의 메커니즘**
-- **실제 TCP/QUIC 소켓 기반 P2P 네트워킹**
-- **DHT를 통한 자동 피어 발견**
-- **스마트 컨트랙트 (Programs) 지원**
+- **Proof of History (PoH) consensus mechanism**
+- **Real TCP/QUIC socket-based P2P networking**
+- **Automatic peer discovery via DHT**
+- **Smart contract (Programs) support**
 - **JSON-RPC API**
 - **Eastsea Attestation Service (EAS)**
-- **통합 지갑 시스템**
+- **Integrated wallet system**
 
 ### Technology Stack
 
@@ -40,7 +40,7 @@ Eastsea는 Zig 언어로 구현된 블록체인 클론으로, 다음과 같은 �
 
 ### Prerequisites
 
-1. **Zig 0.14+** 설치
+1. **Install Zig 0.14+**
    ```bash
    # macOS (Homebrew)
    brew install zig
@@ -51,8 +51,8 @@ Eastsea는 Zig 언어로 구현된 블록체인 클론으로, 다음과 같은 �
    export PATH=$PATH:$(pwd)/zig-linux-x86_64-0.14.0
    ```
 
-2. **Git** (버전 관리)
-3. **Code Editor** (VS Code with Zig extension 권장)
+2. **Git** (version control)
+3. **Code Editor** (VS Code with Zig extension recommended)
 
 ### Project Setup
 
@@ -75,8 +75,8 @@ zig build run
 
 #### VS Code Extensions
 - **Zig Language** (by ziglang)
-- **Error Lens** (실시간 에러 표시)
-- **GitLens** (Git 히스토리 관리)
+- **Error Lens** (real-time error display)
+- **GitLens** (Git history management)
 
 #### Recommended Settings
 ```json

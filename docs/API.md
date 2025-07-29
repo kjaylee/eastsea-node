@@ -1,79 +1,106 @@
 # Eastsea API Documentation
 
+## Table of Contents
+- [Overview](#overview)
+- [JSON-RPC API](#json-rpc-api)
+  - [Endpoint](#endpoint)
+  - [Method Reference](#method-reference)
+- [P2P Network API](#p2p-network-api)
+  - [Message Types](#message-types)
+  - [QUIC Features](#quic-features)
+- [Wallet API](#wallet-api)
+  - [Key Management](#key-management)
+  - [Account Operations](#account-operations)
+- [Smart Contract API](#smart-contract-api)
+  - [Program Structure](#program-structure)
+  - [System Programs](#system-programs)
+  - [Custom Programs](#custom-programs)
+- [Attestation Service API](#attestation-service-api)
+  - [Core Structures](#core-structures)
+  - [Service Methods](#service-methods)
+- [DHT API](#dht-api)
+- [Error Codes](#error-codes)
+  - [JSON-RPC](#json-rpc)
+  - [Network](#network)
+  - [Attestation](#attestation)
+- [Usage Examples](#usage-examples)
+- [Security](#security)
+- [Performance](#performance)
+
+---
+
 ## Overview
 
-Eastsea는 Zig로 구현된 블록체인 클론으로, 다음과 같은 주요 API들을 제공합니다:
+Eastsea provides a comprehensive API suite for blockchain interaction:
 
-- **JSON-RPC API**: 블록체인 상태 조회 및 트랜잭션 제출
-- **P2P Network API**: 노드 간 통신 및 피어 관리 (TCP/QUIC 하이브리드)
-- **Wallet API**: 계정 관리 및 트랜잭션 서명
-- **Smart Contract API**: 프로그램 실행 및 관리
-- **Attestation Service API**: 오프체인 증명 생성 및 검증
+- **JSON-RPC API**: Blockchain state queries and transaction submission
+- **P2P Network API**: Node communication with TCP/QUIC hybrid networking
+- **Wallet API**: Account management and transaction signing
+- **Smart Contract API**: Program execution and management
+- **Attestation Service API**: Off-chain data verification
 
 ---
 
 ## JSON-RPC API
 
-Eastsea는 표준 JSON-RPC 2.0 프로토콜을 사용하여 HTTP 기반 API를 제공합니다.
+### Endpoint
 
 **Base URL**: `http://localhost:8545`
 
-### Methods
+### Method Reference
 
-#### 1. getBlockHeight
+| Method | Description | Parameters | Example |
+|--------|-------------|------------|---------|
+| `getBlockHeight` | Current blockchain height | None | [Example](#getblockheight) |
+| `getBalance` | Account balance query | `address` (hex string) | [Example](#getbalance) |
+| `sendTransaction` | Submit new transaction | `from`, `to`, `amount`, `signature` | [Example](#sendtransaction) |
+| `getBlock` | Block information | `height` (number) | [Example](#getblock) |
+| `getTransaction` | Transaction details | `hash` (hex string) | [Example](#gettransaction) |
+| `getPeers` | Connected peer list | None | [Example](#getpeers) |
+| `getNodeInfo` | Node status information | None | [Example](#getnodeinfo) |
 
-현재 블록체인의 높이를 조회합니다.
+#### getBlockHeight
 
-**Request**:
 ```json
+// Request
 {
   "jsonrpc": "2.0",
   "method": "getBlockHeight",
   "params": [],
   "id": 1
 }
-```
 
-**Response**:
-```json
+// Response
 {
   "jsonrpc": "2.0",
   "result": 42,
-  "error": null,
   "id": 1
 }
 ```
 
-#### 2. getBalance
+#### getBalance
 
-특정 계정의 잔액을 조회합니다.
-
-**Request**:
 ```json
+// Request
 {
   "jsonrpc": "2.0",
   "method": "getBalance",
   "params": ["ff7580ebeca78b5468b42e182fff7e8e820c37c3"],
   "id": 2
 }
-```
 
-**Response**:
-```json
+// Response
 {
   "jsonrpc": "2.0",
   "result": 1000,
-  "error": null,
   "id": 2
 }
 ```
 
-#### 3. sendTransaction
+#### sendTransaction
 
-새로운 트랜잭션을 블록체인에 제출합니다.
-
-**Request**:
 ```json
+// Request
 {
   "jsonrpc": "2.0",
   "method": "sendTransaction",
@@ -85,34 +112,27 @@ Eastsea는 표준 JSON-RPC 2.0 프로토콜을 사용하여 HTTP 기반 API를 �
   },
   "id": 3
 }
-```
 
-**Response**:
-```json
+// Response
 {
   "jsonrpc": "2.0",
   "result": "0x1234567890abcdef",
-  "error": null,
   "id": 3
 }
 ```
 
-#### 4. getBlock
+#### getBlock
 
-특정 블록의 정보를 조회합니다.
-
-**Request**:
 ```json
+// Request
 {
   "jsonrpc": "2.0",
   "method": "getBlock",
   "params": [1],
   "id": 4
 }
-```
 
-**Response**:
-```json
+// Response
 {
   "jsonrpc": "2.0",
   "result": {
@@ -123,27 +143,22 @@ Eastsea는 표준 JSON-RPC 2.0 프로토콜을 사용하여 HTTP 기반 API를 �
     "transactions": [],
     "merkle_root": "0x..."
   },
-  "error": null,
   "id": 4
 }
 ```
 
-#### 5. getTransaction
+#### getTransaction
 
-특정 트랜잭션의 정보를 조회합니다.
-
-**Request**:
 ```json
+// Request
 {
   "jsonrpc": "2.0",
   "method": "getTransaction",
   "params": ["0x1234567890abcdef"],
   "id": 5
 }
-```
 
-**Response**:
-```json
+// Response
 {
   "jsonrpc": "2.0",
   "result": {
@@ -154,27 +169,22 @@ Eastsea는 표준 JSON-RPC 2.0 프로토콜을 사용하여 HTTP 기반 API를 �
     "timestamp": 1234567890,
     "signature": "abcd1234..."
   },
-  "error": null,
   "id": 5
 }
 ```
 
-#### 6. getPeers
+#### getPeers
 
-현재 연결된 피어 목록을 조회합니다.
-
-**Request**:
 ```json
+// Request
 {
   "jsonrpc": "2.0",
   "method": "getPeers",
   "params": [],
   "id": 6
 }
-```
 
-**Response**:
-```json
+// Response
 {
   "jsonrpc": "2.0",
   "result": [
@@ -185,27 +195,22 @@ Eastsea는 표준 JSON-RPC 2.0 프로토콜을 사용하여 HTTP 기반 API를 �
       "connected": true
     }
   ],
-  "error": null,
   "id": 6
 }
 ```
 
-#### 7. getNodeInfo
+#### getNodeInfo
 
-현재 노드의 정보를 조회합니다.
-
-**Request**:
 ```json
+// Request
 {
   "jsonrpc": "2.0",
   "method": "getNodeInfo",
   "params": [],
   "id": 7
 }
-```
 
-**Response**:
-```json
+// Response
 {
   "jsonrpc": "2.0",
   "result": {
@@ -216,7 +221,6 @@ Eastsea는 표준 JSON-RPC 2.0 프로토콜을 사용하여 HTTP 기반 API를 �
     "blockchain_height": 42,
     "node_id": "def456..."
   },
-  "error": null,
   "id": 7
 }
 ```
@@ -225,12 +229,9 @@ Eastsea는 표준 JSON-RPC 2.0 프로토콜을 사용하여 HTTP 기반 API를 �
 
 ## P2P Network API
 
-P2P 네트워크는 내부적으로 사용되는 API로, 노드 간 직접 통신에 사용됩니다. 
-Eastsea는 TCP와 QUIC 프로토콜을 모두 지원하는 하이브리드 네트워킹을 사용합니다.
-
 ### Message Types
 
-#### 1. Handshake
+#### Handshake
 ```zig
 const HandshakeMessage = struct {
     protocol_version: u32,
@@ -240,7 +241,7 @@ const HandshakeMessage = struct {
 };
 ```
 
-#### 2. Ping/Pong
+#### Ping/Pong
 ```zig
 const PingMessage = struct {
     timestamp: u64,
@@ -253,7 +254,7 @@ const PongMessage = struct {
 };
 ```
 
-#### 3. Block Broadcast
+#### Block Broadcast
 ```zig
 const BlockMessage = struct {
     block_data: []u8,
@@ -262,7 +263,7 @@ const BlockMessage = struct {
 };
 ```
 
-#### 4. Transaction Broadcast
+#### Transaction Broadcast
 ```zig
 const TransactionMessage = struct {
     transaction_data: []u8,
@@ -270,80 +271,55 @@ const TransactionMessage = struct {
 };
 ```
 
-### QUIC Specific Features
+### QUIC Features
 
-QUIC 프로토콜은 다음과 같은 고급 기능을 제공합니다:
+Eastsea's QUIC implementation includes:
 
-1. **Multiplexed Streams**: 여러 스트림을 동시에 사용하여 블록과 트랜잭션을 병렬로 전송
-2. **0-RTT Connection Resumption**: 연결 재개 시 지연 시간 최소화
-3. **Connection Migration**: IP 주소 변경 시 연결 유지
-4. **Enhanced Security**: 연결 ID 암호화 및 패킷 인증
-5. **Flow Control**: 스트림 및 연결 수준의 흐름 제어
-6. **Congestion Control**: BBR 알고리즘 기반 혼잡 제어
-7. **Forward Secrecy**: Perfect Forward Secrecy 보장
-8. **Loss Recovery**: 빠른 손실 패킷 복구 (최대 20배 빠름)
+- **Multiplexed Streams**: Parallel block/transaction transmission
+- **0-RTT Connection Resumption**: Minimized connection latency
+- **Connection Migration**: IP/port change resilience
+- **Enhanced Security**: Encrypted connection IDs & packet authentication
+- **Advanced Flow Control**: Stream/connection level management
+- **BBR Congestion Control**: Optimal bandwidth utilization
+- **Perfect Forward Secrecy**: Enhanced security guarantees
+- **Rapid Loss Recovery**: 20x faster than TCP
 
 ---
 
 ## Wallet API
 
-지갑 기능을 위한 내부 API입니다.
-
 ### Key Management
 
-#### 1. Generate Key Pair
 ```zig
-pub fn generateKeyPair() !KeyPair {
-    // ECDSA 키 페어 생성
-}
+// Generate new key pair
+pub fn generateKeyPair() !KeyPair;
+
+// Sign transaction
+pub fn signTransaction(private_key: [32]u8, transaction: Transaction) ![64]u8;
+
+// Verify signature
+pub fn verifySignature(public_key: [32]u8, message: []const u8, signature: [64]u8) !bool;
 ```
 
-#### 2. Sign Transaction
-```zig
-pub fn signTransaction(private_key: [32]u8, transaction: Transaction) ![64]u8 {
-    // 트랜잭션 서명
-}
-```
+### Account Operations
 
-#### 3. Verify Signature
 ```zig
-pub fn verifySignature(public_key: [32]u8, message: []const u8, signature: [64]u8) !bool {
-    // 서명 검증
-}
-```
+// Create new account
+pub fn createAccount() !Account;
 
-### Account Management
+// Get account balance
+pub fn getBalance(address: []const u8) !u64;
 
-#### 1. Create Account
-```zig
-pub fn createAccount() !Account {
-    // 새 계정 생성
-}
-```
-
-#### 2. Get Balance
-```zig
-pub fn getBalance(address: []const u8) !u64 {
-    // 계정 잔액 조회
-}
-```
-
-#### 3. Transfer
-```zig
-pub fn transfer(from: []const u8, to: []const u8, amount: u64) ![]const u8 {
-    // 토큰 전송
-}
+// Transfer tokens
+pub fn transfer(from: []const u8, to: []const u8, amount: u64) ![]const u8;
 ```
 
 ---
 
-## Smart Contract (Programs) API
+## Smart Contract API
 
-Eastsea의 스마트 컨트랙트 시스템인 Programs API입니다.
+### Program Structure
 
-### Program Interface
-
-#### 1. Program Structure
 ```zig
 pub const Program = struct {
     id: [32]u8,
@@ -351,15 +327,13 @@ pub const Program = struct {
     code: []const u8,
     state: []u8,
     
-    pub fn execute(self: *Program, instruction: Instruction) !ProgramResult {
-        // 프로그램 실행
-    }
+    pub fn execute(self: *Program, instruction: Instruction) !ProgramResult;
 };
 ```
 
-#### 2. System Programs
+### System Programs
 
-##### Token Program
+#### Token Program
 ```zig
 pub const TokenProgram = struct {
     pub fn mint(account: []const u8, amount: u64) !void;
@@ -368,7 +342,7 @@ pub const TokenProgram = struct {
 };
 ```
 
-##### System Program
+#### System Program
 ```zig
 pub const SystemProgram = struct {
     pub fn createAccount(address: []const u8) !void;
@@ -376,30 +350,20 @@ pub const SystemProgram = struct {
 };
 ```
 
-#### 3. Custom Programs
+### Custom Programs
 
-사용자 정의 프로그램 예제:
-
-##### Counter Program
+#### Counter Program
 ```zig
 pub const CounterProgram = struct {
     count: u64 = 0,
     
-    pub fn increment(self: *CounterProgram) !void {
-        self.count += 1;
-    }
-    
-    pub fn decrement(self: *CounterProgram) !void {
-        if (self.count > 0) self.count -= 1;
-    }
-    
-    pub fn get(self: *CounterProgram) u64 {
-        return self.count;
-    }
+    pub fn increment(self: *CounterProgram) !void;
+    pub fn decrement(self: *CounterProgram) !void;
+    pub fn get(self: *CounterProgram) u64;
 };
 ```
 
-##### Voting Program
+#### Voting Program
 ```zig
 pub const VotingProgram = struct {
     proposals: std.ArrayList(Proposal),
@@ -411,13 +375,13 @@ pub const VotingProgram = struct {
 };
 ```
 
+---
+
 ## Attestation Service API
 
-Eastsea Attestation Service (EAS) API는 오프체인 데이터 검증을 위한 인터페이스입니다.
+### Core Structures
 
-### Attestation Interface
-
-#### 1. Attestation Structure
+#### Attestation
 ```zig
 pub const Attestation = struct {
     id: [32]u8,
@@ -431,25 +395,23 @@ pub const Attestation = struct {
     signature: [64]u8,
     hash: [32]u8,
     
-    pub fn verify(self: *const Attestation) bool {
-        // Verify attestation signature and validity
-    }
+    pub fn verify(self: *const Attestation) bool;
 };
 ```
 
-#### 2. Schema Structure
+#### Schema
 ```zig
 pub const Schema = struct {
     id: [32]u8,
     name: []const u8,
     description: []const u8,
-    definition: []const u8,  // JSON schema definition
+    definition: []const u8,  // JSON schema
     creator: [20]u8,
     timestamp: u64,
 };
 ```
 
-#### 3. Attester Structure
+#### Attester
 ```zig
 pub const Attester = struct {
     id: [20]u8,
@@ -461,11 +423,11 @@ pub const Attester = struct {
 };
 ```
 
-#### 4. Attestation Service Methods
+### Service Methods
+
 ```zig
 pub const AttestationService = struct {
     pub fn createAttestation(
-        self: *AttestationService,
         schema_id: [32]u8,
         attester_id: [20]u8,
         recipient: [20]u8,
@@ -474,188 +436,130 @@ pub const AttestationService = struct {
         private_key: [32]u8
     ) !*Attestation;
     
-    pub fn verifyAttestation(self: *AttestationService, attestation_id: [32]u8) bool;
-    
-    pub fn revokeAttestation(self: *AttestationService, attestation_id: [32]u8) !void;
-    
-    pub fn registerSchema(self: *AttestationService, schema: Schema) !void;
-    
-    pub fn registerAttester(self: *AttestationService, attester: Attester) !void;
-    
-    pub fn getAttestationsForRecipient(self: *AttestationService, recipient: [20]u8) ![]*Attestation;
-    
-    pub fn getAttestationsByAttester(self: *AttestationService, attester_id: [20]u8) ![]*Attestation;
+    pub fn verifyAttestation(attestation_id: [32]u8) bool;
+    pub fn revokeAttestation(attestation_id: [32]u8) !void;
+    pub fn registerSchema(schema: Schema) !void;
+    pub fn registerAttester(attester: Attester) !void;
+    pub fn getAttestationsForRecipient(recipient: [20]u8) ![]*Attestation;
+    pub fn getAttestationsByAttester(attester_id: [20]u8) ![]*Attestation;
 };
 ```
 
 ---
 
-## DHT (Distributed Hash Table) API
+## DHT API
 
-분산 해시 테이블을 통한 피어 발견 API입니다.
-
-### DHT Operations
-
-#### 1. Store Value
 ```zig
-pub fn store(key: [32]u8, value: []const u8) !void {
-    // DHT에 값 저장
-}
-```
+// Store value in DHT
+pub fn store(key: [32]u8, value: []const u8) !void;
 
-#### 2. Find Value
-```zig
-pub fn findValue(key: [32]u8) !?[]const u8 {
-    // DHT에서 값 조회
-}
-```
+// Retrieve value from DHT
+pub fn findValue(key: [32]u8) !?[]const u8;
 
-#### 3. Find Node
-```zig
-pub fn findNode(target: [32]u8) ![]DHTNode {
-    // 특정 노드 ID에 가장 가까운 노드들 찾기
-}
-```
+// Find closest nodes
+pub fn findNode(target: [32]u8) ![]DHTNode;
 
-#### 4. Bootstrap
-```zig
-pub fn bootstrap(bootstrap_nodes: []const DHTNode) !void {
-    // DHT 네트워크에 참여
-}
+// Join DHT network
+pub fn bootstrap(bootstrap_nodes: []const DHTNode) !void;
 ```
 
 ---
 
 ## Error Codes
 
-### JSON-RPC Error Codes
+### JSON-RPC
 
 | Code | Message | Description |
 |------|---------|-------------|
 | -32700 | Parse error | Invalid JSON |
-| -32600 | Invalid Request | Invalid JSON-RPC request |
-| -32601 | Method not found | Method does not exist |
-| -32602 | Invalid params | Invalid method parameters |
-| -32603 | Internal error | Internal JSON-RPC error |
-| -1 | Transaction failed | Transaction execution failed |
-| -2 | Insufficient balance | Account has insufficient balance |
-| -3 | Invalid signature | Transaction signature is invalid |
-| -4 | Block not found | Requested block does not exist |
-| -5 | Transaction not found | Requested transaction does not exist |
-| -6 | Attestation not found | Requested attestation does not exist |
-| -7 | Schema not found | Requested schema does not exist |
-| -8 | Attester not found | Requested attester does not exist |
+| -32600 | Invalid Request | Malformed request |
+| -32601 | Method not found | Unknown method |
+| -32602 | Invalid params | Incorrect parameters |
+| -32603 | Internal error | Server-side error |
+| -1 | Transaction failed | Execution failure |
+| -2 | Insufficient balance | Not enough funds |
+| -3 | Invalid signature | Signature verification failed |
+| -4 | Block not found | Non-existent block |
+| -5 | Transaction not found | Non-existent transaction |
 
-### Network Error Codes
+### Network
 
 | Code | Description |
 |------|-------------|
-| `ConnectionRefused` | Unable to connect to peer |
-| `Timeout` | Network operation timed out |
-| `InvalidMessage` | Received invalid message format |
-| `HandshakeFailed` | Peer handshake failed |
-| `VersionMismatch` | Protocol version mismatch |
+| `ConnectionRefused` | Peer unreachable |
+| `Timeout` | Operation timed out |
+| `InvalidMessage` | Malformed message |
+| `HandshakeFailed` | Protocol mismatch |
+| `VersionMismatch` | Incompatible protocol version |
 
-### Attestation Error Codes
+### Attestation
 
 | Code | Description |
 |------|-------------|
-| `AttestationExpired` | Attestation has expired |
-| `AttestationRevoked` | Attestation has been revoked |
-| `InvalidSignature` | Attestation signature is invalid |
-| `SchemaMismatch` | Attestation schema does not match |
+| `AttestationExpired` | Validity period expired |
+| `AttestationRevoked` | Explicitly revoked |
+| `InvalidSignature` | Signature verification failed |
+| `SchemaMismatch` | Schema validation error |
 
 ---
 
 ## Usage Examples
 
-### Starting a Node
-
+### Node Operations
 ```bash
-# Basic node
+# Start basic node
 zig build run
-
-# Production node
-zig build run-prod
-
-# P2P test node
-zig build run-p2p -- 8000
 
 # Connect to existing node
 zig build run-p2p -- 8001 8000
+
+# Start DHT network
+zig build run-dht -- 8000
 ```
 
-### Using JSON-RPC API
-
+### API Interaction
 ```bash
 # Get block height
 curl -X POST http://localhost:8545 \
   -H "Content-Type: application/json" \
   -d '{"jsonrpc":"2.0","method":"getBlockHeight","params":[],"id":1}'
 
-# Get balance
-curl -X POST http://localhost:8545 \
-  -H "Content-Type: application/json" \
-  -d '{"jsonrpc":"2.0","method":"getBalance","params":["ff7580ebeca78b5468b42e182fff7e8e820c37c3"],"id":2}'
-
 # Verify attestation
 curl -X POST http://localhost:8545 \
   -H "Content-Type: application/json" \
-  -d '{"jsonrpc":"2.0","method":"verifyAttestation","params":["d801073b434d52a467257dafc93f971052c6d2e857fff2b4e57087b7b024b984"],"id":3}'
+  -d '{"jsonrpc":"2.0","method":"verifyAttestation","params":["d801073b..."],"id":3}'
 ```
 
-### DHT Network Testing
-
+### Testing
 ```bash
-# Start DHT node
-zig build run-dht -- 8000
-
-# Connect to DHT network
-zig build run-dht -- 8001 8000
-```
-
-### EAS Testing
-
-```bash
-# Run all EAS tests
+# Run EAS tests
 zig build run-eas -- all
 
-# Run specific EAS test
-zig build run-eas -- verification
+# Run DHT tests
+zig build run-dht -- 8000
 ```
 
 ---
 
-## Security Considerations
+## Security
 
-1. **Private Key Management**: 개인키는 안전하게 저장하고 네트워크를 통해 전송하지 마세요.
-
-2. **Transaction Validation**: 모든 트랜잭션은 서명 검증을 거쳐야 합니다.
-
-3. **Network Security**: P2P 통신은 체크섬을 통한 무결성 검증을 포함합니다.
-
-4. **Rate Limiting**: RPC API 호출에 대한 적절한 제한을 설정하세요.
-
-5. **Input Validation**: 모든 사용자 입력은 검증되어야 합니다.
+- 🔒 **Key Management**: Never transmit private keys over network
+- ✅ **Transaction Validation**: All transactions require signature verification
+- 🛡️ **Network Security**: Checksum-verified P2P communication
+- ⏱️ **Rate Limiting**: Implement API call limits
+- 🧪 **Input Validation**: Validate all user inputs
 
 ---
 
-## Performance Considerations
+## Performance
 
-1. **Memory Management**: Zig의 allocator를 적절히 사용하여 메모리 누수를 방지합니다.
-
-2. **Network Optimization**: 메시지 압축 및 배치 처리를 고려하세요.
-
-3. **Database Optimization**: 블록체인 데이터의 효율적인 저장 및 조회를 위한 인덱싱을 구현하세요.
-
-4. **Concurrent Processing**: 트랜잭션 처리의 병렬화를 고려하세요.
+- 💾 **Memory Management**: Use Zig allocators to prevent leaks
+- 📡 **Network Optimization**: Implement message compression
+- 🗃️ **Database Optimization**: Use indexing for blockchain data
+- ⚡ **Concurrent Processing**: Parallelize transaction execution
 
 ---
 
-## Contributing
+## Documentation Status
 
-API 개선 사항이나 버그 리포트는 GitHub 이슈를 통해 제출해 주세요.
-
-## License
-
-MIT License - 자세한 내용은 LICENSE 파일을 참조하세요.
+✅ **Up-to-date with Phase 17 implementation** (Turbine, Sharding, Parallel Execution)
