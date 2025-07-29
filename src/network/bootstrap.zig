@@ -284,6 +284,7 @@ pub const BootstrapClient = struct {
         
         const added = try dht_node.routing_table.addNode(dht_node_entry);
         // If the node wasn't added (e.g., bucket full), we need to clean it up
+        // Otherwise, the routing table now owns the node and will clean it up
         if (!added) {
             dht_node_entry.deinit(self.allocator);
         }
