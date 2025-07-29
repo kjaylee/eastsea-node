@@ -35,7 +35,7 @@ timeout_cmd 30s zig build run || echo "⚠️ Integration test timeout (expected
 
 echo "🎯 Testing individual components..."
 echo "  - P2P Network Test"
-timeout_cmd 10s zig-out/bin/p2p-test 8000 &
+timeout_cmd 10s zig build run-p2p -- 8000 &
 
 echo "  - Smart Contracts Test"
 zig-out/bin/programs-test all > /dev/null
@@ -54,6 +54,27 @@ zig-out/bin/phase9-test all > /dev/null
 
 echo "  - QUIC Protocol Test"
 zig-out/bin/quic-test all > /dev/null
+
+echo "  - DHT Test"
+timeout_cmd 10s zig build run-dht -- 8000 &
+
+echo "  - Bootstrap Test"
+timeout_cmd 10s zig build run-bootstrap -- 8000 &
+
+echo "  - mDNS Test"
+timeout_cmd 10s zig build run-mdns -- 8000 &
+
+echo "  - UPnP Test"
+timeout_cmd 10s zig build run-upnp -- 8000 &
+
+echo "  - STUN Test"
+timeout_cmd 10s zig build run-stun -- 8000 &
+
+echo "  - Port Scanner Test"
+timeout_cmd 10s zig build run-port-scan -- 8000 &
+
+echo "  - Broadcast Test"
+timeout_cmd 10s zig build run-broadcast -- 8000 &
 
 # 2. Git 작업
 echo "📝 Staging changes..."
