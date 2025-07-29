@@ -538,8 +538,8 @@ fn handleDHTPing(p2p_node: *p2p.P2PNode, peer: *p2p.PeerConnection, message: *co
     std.debug.print("🏓 DHT: Received ping\n", .{});
     
     // Parse DHT message
-    var dht_msg = try DHTMessage.deserialize(std.heap.page_allocator, message.payload);
-    defer dht_msg.deinit(std.heap.page_allocator);
+    var dht_msg = try DHTMessage.deserialize(p2p_node.allocator, message.payload);
+    defer dht_msg.deinit(p2p_node.allocator);
     
     // Find DHT instance from P2P node user_data
     if (p2p_node.user_data) |user_data| {
@@ -548,7 +548,7 @@ fn handleDHTPing(p2p_node: *p2p.P2PNode, peer: *p2p.PeerConnection, message: *co
         // Add sender to routing table
         const sender_node = DHTNode{
             .id = dht_msg.sender_id,
-            .address = try std.heap.page_allocator.dupe(u8, "127.0.0.1"),
+            .address = try p2p_node.allocator.dupe(u8, "127.0.0.1"),
             .port = peer.port,
             .last_seen = std.time.timestamp(),
             .distance = null,
@@ -556,21 +556,21 @@ fn handleDHTPing(p2p_node: *p2p.P2PNode, peer: *p2p.PeerConnection, message: *co
         
         _ = dht_instance.routing_table.addNode(sender_node) catch |err| {
             std.debug.print("⚠️ DHT: Failed to add node to routing table: {}\n", .{err});
-            std.heap.page_allocator.free(sender_node.address);
+            p2p_node.allocator.free(sender_node.address);
         };
     }
     
     // Send pong response
-    const pong_data = try std.fmt.allocPrint(std.heap.page_allocator, "pong:{s}:{}", .{ std.fmt.fmtSliceHexLower(&dht_msg.sender_id), dht_msg.timestamp });
-    defer std.heap.page_allocator.free(pong_data);
+    const pong_data = try std.fmt.allocPrint(p2p_node.allocator, "pong:{s}:{}", .{ std.fmt.fmtSliceHexLower(&dht_msg.sender_id), dht_msg.timestamp });
+    defer p2p_node.allocator.free(pong_data);
     
-    var response_msg = try DHTMessage.init(std.heap.page_allocator, .pong, dht_msg.sender_id, dht_msg.sender_id, pong_data);
-    defer response_msg.deinit(std.heap.page_allocator);
+    var response_msg = try DHTMessage.init(p2p_node.allocator, .pong, dht_msg.sender_id, dht_msg.sender_id, pong_data);
+    defer response_msg.deinit(p2p_node.allocator);
     
-    const response_payload = try response_msg.serialize(std.heap.page_allocator);
-    defer std.heap.page_allocator.free(response_payload);
+    const response_payload = try response_msg.serialize(p2p_node.allocator);
+    defer p2p_node.allocator.free(response_payload);
     
-    var p2p_msg = try p2p.P2PMessage.init(std.heap.page_allocator, 11, response_payload);
+    var p2p_msg = try p2p.P2PMessage.init(p2p_node.allocator, 11, response_payload);
     defer p2p_msg.deinit();
     
     try peer.sendMessage(&p2p_msg);
@@ -581,8 +581,8 @@ fn handleDHTPong(p2p_node: *p2p.P2PNode, peer: *p2p.PeerConnection, message: *co
     std.debug.print("🏓 DHT: Received pong\n", .{});
     
     // Parse DHT message
-    var dht_msg = try DHTMessage.deserialize(std.heap.page_allocator, message.payload);
-    defer dht_msg.deinit(std.heap.page_allocator);
+    var dht_msg = try DHTMessage.deserialize(p2p_node.allocator, message.payload);
+    defer dht_msg.deinit(p2p_node.allocator);
     
     // Find DHT instance from P2P node user_data
     if (p2p_node.user_data) |user_data| {
@@ -591,7 +591,7 @@ fn handleDHTPong(p2p_node: *p2p.P2PNode, peer: *p2p.PeerConnection, message: *co
         // Add/update sender in routing table
         const sender_node = DHTNode{
             .id = dht_msg.sender_id,
-            .address = try std.heap.page_allocator.dupe(u8, "127.0.0.1"),
+            .address = try p2p_node.allocator.dupe(u8, "127.0.0.1"),
             .port = peer.port,
             .last_seen = std.time.timestamp(),
             .distance = null,
@@ -599,7 +599,7 @@ fn handleDHTPong(p2p_node: *p2p.P2PNode, peer: *p2p.PeerConnection, message: *co
         
         _ = dht_instance.routing_table.addNode(sender_node) catch |err| {
             std.debug.print("⚠️ DHT: Failed to add node to routing table: {}\n", .{err});
-            std.heap.page_allocator.free(sender_node.address);
+            p2p_node.allocator.free(sender_node.address);
         };
         
         // Remove pending request if this was a response to our ping
@@ -623,12 +623,12 @@ fn handleFindNode(p2p_node: *p2p.P2PNode, peer: *p2p.PeerConnection, message: *c
     std.debug.print("🔍 DHT: Received find_node request\n", .{});
     
     // Parse DHT message
-    var dht_msg = try DHTMessage.deserialize(std.heap.page_allocator, message.payload);
-    defer dht_msg.deinit(std.heap.page_allocator);
+    var dht_msg = try DHTMessage.deserialize(p2p_node.allocator, message.payload);
+    defer dht_msg.deinit(p2p_node.allocator);
     
     std.debug.print("🔍 DHT: Find node request for target: {s}\n", .{std.fmt.fmtSliceHexLower(&dht_msg.target_id)});
     
-    var peers_info = std.ArrayList(u8).init(std.heap.page_allocator);
+    var peers_info = std.ArrayList(u8).init(p2p_node.allocator);
     defer peers_info.deinit();
     
     var peer_count: u32 = 0;
@@ -640,7 +640,7 @@ fn handleFindNode(p2p_node: *p2p.P2PNode, peer: *p2p.PeerConnection, message: *c
         // Add sender to routing table
         const sender_node = DHTNode{
             .id = dht_msg.sender_id,
-            .address = try std.heap.page_allocator.dupe(u8, "127.0.0.1"),
+            .address = try p2p_node.allocator.dupe(u8, "127.0.0.1"),
             .port = peer.port,
             .last_seen = std.time.timestamp(),
             .distance = null,
@@ -648,7 +648,7 @@ fn handleFindNode(p2p_node: *p2p.P2PNode, peer: *p2p.PeerConnection, message: *c
         
         _ = dht_instance.routing_table.addNode(sender_node) catch |err| {
             std.debug.print("⚠️ DHT: Failed to add node to routing table: {}\n", .{err});
-            std.heap.page_allocator.free(sender_node.address);
+            p2p_node.allocator.free(sender_node.address);
         };
         
         // Find closest nodes to target
@@ -658,7 +658,7 @@ fn handleFindNode(p2p_node: *p2p.P2PNode, peer: *p2p.PeerConnection, message: *c
         };
         defer {
             for (closest_nodes.items) |*dht_node| {
-                dht_node.deinit(std.heap.page_allocator);
+                dht_node.deinit(p2p_node.allocator);
             }
             closest_nodes.deinit();
         }
@@ -668,12 +668,12 @@ fn handleFindNode(p2p_node: *p2p.P2PNode, peer: *p2p.PeerConnection, message: *c
             if (peer_count > 0) {
                 try peers_info.appendSlice(",");
             }
-            const node_info = try std.fmt.allocPrint(std.heap.page_allocator, "{s}:{d}:{s}", .{ 
+            const node_info = try std.fmt.allocPrint(p2p_node.allocator, "{s}:{d}:{s}", .{ 
                 closest_node.address, 
                 closest_node.port,
                 std.fmt.fmtSliceHexLower(&closest_node.id)
             });
-            defer std.heap.page_allocator.free(node_info);
+            defer p2p_node.allocator.free(node_info);
             try peers_info.appendSlice(node_info);
             peer_count += 1;
         }
@@ -683,21 +683,21 @@ fn handleFindNode(p2p_node: *p2p.P2PNode, peer: *p2p.PeerConnection, message: *c
             if (peer_count > 0) {
                 try peers_info.appendSlice(",");
             }
-            const peer_info = try std.fmt.allocPrint(std.heap.page_allocator, "{}:{d}", .{ existing_peer.address, existing_peer.port });
-            defer std.heap.page_allocator.free(peer_info);
+            const peer_info = try std.fmt.allocPrint(p2p_node.allocator, "{}:{d}", .{ existing_peer.address, existing_peer.port });
+            defer p2p_node.allocator.free(peer_info);
             try peers_info.appendSlice(peer_info);
             peer_count += 1;
         }
     }
     
     // Send find_node response
-    var response_msg = try DHTMessage.init(std.heap.page_allocator, .find_node_response, dht_msg.sender_id, dht_msg.target_id, peers_info.items);
-    defer response_msg.deinit(std.heap.page_allocator);
+    var response_msg = try DHTMessage.init(p2p_node.allocator, .find_node_response, dht_msg.sender_id, dht_msg.target_id, peers_info.items);
+    defer response_msg.deinit(p2p_node.allocator);
     
-    const response_payload = try response_msg.serialize(std.heap.page_allocator);
-    defer std.heap.page_allocator.free(response_payload);
+    const response_payload = try response_msg.serialize(p2p_node.allocator);
+    defer p2p_node.allocator.free(response_payload);
     
-    var p2p_msg = try p2p.P2PMessage.init(std.heap.page_allocator, 13, response_payload);
+    var p2p_msg = try p2p.P2PMessage.init(p2p_node.allocator, 13, response_payload);
     defer p2p_msg.deinit();
     
     try peer.sendMessage(&p2p_msg);
@@ -709,8 +709,8 @@ fn handleFindNodeResponse(p2p_node: *p2p.P2PNode, peer: *p2p.PeerConnection, mes
     std.debug.print("📋 DHT: Received find_node response\n", .{});
     
     // Parse DHT message
-    var dht_msg = try DHTMessage.deserialize(std.heap.page_allocator, message.payload);
-    defer dht_msg.deinit(std.heap.page_allocator);
+    var dht_msg = try DHTMessage.deserialize(p2p_node.allocator, message.payload);
+    defer dht_msg.deinit(p2p_node.allocator);
     
     std.debug.print("📋 DHT: Received find_node response from {s}\n", .{std.fmt.fmtSliceHexLower(&dht_msg.sender_id)});
     
@@ -748,7 +748,7 @@ fn handleFindNodeResponse(p2p_node: *p2p.P2PNode, peer: *p2p.PeerConnection, mes
                             
                             new_node = DHTNode{
                                 .id = node_id,
-                                .address = try std.heap.page_allocator.dupe(u8, address_part),
+                                .address = try p2p_node.allocator.dupe(u8, address_part),
                                 .port = port,
                                 .last_seen = std.time.timestamp(),
                                 .distance = null,
@@ -758,13 +758,13 @@ fn handleFindNodeResponse(p2p_node: *p2p.P2PNode, peer: *p2p.PeerConnection, mes
                         }
                     } else {
                         // Generate ID from address:port
-                        new_node = DHTNode.init(std.heap.page_allocator, address_part, port) catch continue;
+                        new_node = DHTNode.init(p2p_node.allocator, address_part, port) catch continue;
                     }
                     
                     // Add to routing table
                     _ = dht_instance.routing_table.addNode(new_node) catch |err| {
                         std.debug.print("⚠️ DHT: Failed to add discovered node: {}\n", .{err});
-                        new_node.deinit(std.heap.page_allocator);
+                        new_node.deinit(p2p_node.allocator);
                         continue;
                     };
                     
@@ -827,7 +827,9 @@ test "DHT message serialization" {
     var sender_id: NodeId = undefined;
     std.crypto.random.bytes(&sender_id);
     
-    const original_msg = try DHTMessage.init(allocator, .ping, sender_id, "test payload");
+    var target_id: NodeId = undefined;
+    std.crypto.random.bytes(&target_id);
+    var original_msg = try DHTMessage.init(allocator, .ping, sender_id, target_id, "test payload");
     defer original_msg.deinit(allocator);
     
     const serialized = try original_msg.serialize(allocator);

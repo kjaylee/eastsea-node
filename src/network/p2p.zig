@@ -691,7 +691,7 @@ test "P2P message serialization" {
     const testing = std.testing;
     const allocator = testing.allocator;
     
-    const original_msg = try P2PMessage.init(allocator, 0, "test payload");
+    var original_msg = try P2PMessage.init(allocator, 0, "test payload");
     defer original_msg.deinit();
     
     var buffer: [1024]u8 = undefined;
