@@ -262,35 +262,35 @@ pub const BootstrapClient = struct {
     }
 
     fn connectToBootstrapNode(self: *BootstrapClient, bootstrap_node: *BootstrapNodeConfig) !void {
-        if (self.p2p_node == null) return BootstrapError.NetworkError;
+    if (self.p2p_node == null) return BootstrapError.NetworkError;
 
-        // Skip if this is our own node
-        if (std.mem.eql(u8, bootstrap_node.address, self.local_address) and bootstrap_node.port == self.local_port) {
-            return;
-        }
-
-        const peer_address = try bootstrap_node.toNetAddress();
-        
-        // Try to connect via P2P
-        _ = try self.p2p_node.?.connectToPeer(peer_address);
-
-        // Send bootstrap request
-        try self.sendBootstrapRequest(bootstrap_node);
-
-        // If DHT is available, add to DHT routing table
-        if (self.dht_node) |dht_node| {
-            var dht_node_entry = try dht.DHTNode.init(self.allocator, bootstrap_node.address, bootstrap_node.port);
-            errdefer dht_node_entry.deinit(self.allocator); // Clean up if addNode fails
-            
-            const added = try dht_node.routing_table.addNode(dht_node_entry);
-            // If the node wasn't added (e.g., bucket full), we need to clean it up
-            if (!added) {
-                dht_node_entry.deinit(self.allocator);
-            }
-        }
-
-        bootstrap_node.last_seen = std.time.timestamp();
+    // Skip if this is our own node
+    if (std.mem.eql(u8, bootstrap_node.address, self.local_address) and bootstrap_node.port == self.local_port) {
+        return;
     }
+
+    const peer_address = try bootstrap_node.toNetAddress();
+    
+    // Try to connect via P2P
+    _ = try self.p2p_node.?.connectToPeer(peer_address);
+
+    // Send bootstrap request
+    try self.sendBootstrapRequest(bootstrap_node);
+
+    // If DHT is available, add to DHT routing table
+    if (self.dht_node) |dht_node| {
+        var dht_node_entry = try dht.DHTNode.init(self.allocator, bootstrap_node.address, bootstrap_node.port);
+        errdefer dht_node_entry.deinit(self.allocator); // Clean up if anything fails after this point
+        
+        const added = try dht_node.routing_table.addNode(dht_node_entry);
+        // If the node wasn't added (e.g., bucket full), we need to clean it up
+        if (!added) {
+            dht_node_entry.deinit(self.allocator);
+        }
+    }
+
+    bootstrap_node.last_seen = std.time.timestamp();
+}
 
     fn sendBootstrapRequest(self: *BootstrapClient, bootstrap_node: *const BootstrapNodeConfig) !void {
         if (self.p2p_node == null) return BootstrapError.NetworkError;
