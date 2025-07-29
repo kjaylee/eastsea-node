@@ -16,6 +16,7 @@ Eastsea는 Proof of History 합의 메커니즘과 완전한 P2P 네트워킹을
 - **Proof of History 합의**: Solana 스타일의 빠른 합의 메커니즘
 - **Zig 언어**: 메모리 안전성과 최적화된 성능
 - **스마트 컨트랙트**: Program 기반 실행 환경
+- **Eastsea Attestation Service**: 오프체인 데이터 검증 시스템 (프라이버시 기능 포함)
 
 ### 🌐 **완전한 P2P 네트워킹**
 - **실제 TCP/QUIC 통신**: 메시지 직렬화/역직렬화 및 체크섬 검증
@@ -130,7 +131,7 @@ eastsea/
 
 ---
 
-## 🧪 테스트 및 품질 보증
+### 🧪 테스트 및 품질 보증
 
 ### 테스트 커버리지
 - ✅ **단위 테스트**: 핵심 로직 검증
@@ -138,6 +139,7 @@ eastsea/
 - ✅ **성능 테스트**: 벤치마킹 프레임워크
 - ✅ **보안 테스트**: 암호화 및 네트워크 보안
 - ✅ **복원력 테스트**: 네트워크 장애 시나리오
+- ✅ **EAS 테스트**: 오프체인 증명 시스템
 
 ### 개발자를 위한 테스트 가이드
 ```bash
@@ -148,6 +150,9 @@ zig build && zig build test && zig build run
 zig build run-p2p -- 8000 &
 zig build run-p2p -- 8001 8000
 
+# EAS 기능 검증
+zig build run-eas -- all
+
 # 성능 벤치마크
 zig build -Doptimize=ReleaseFast
 zig build run-custom-programs -- benchmark
@@ -155,22 +160,25 @@ zig build run-custom-programs -- benchmark
 
 ---
 
-## 🎯 사용 사례
+### 🎯 사용 사례
 
 ### 🎓 **교육 및 학습**
 - 블록체인 기술 학습용 참고 구현
 - P2P 네트워킹 및 분산 시스템 연구
 - Zig 언어 고급 프로젝트 사례
+- 오프체인 증명 시스템 학습
 
 ### 🔬 **연구 및 개발**
 - 합의 알고리즘 실험 플랫폼
 - 네트워크 프로토콜 프로토타이핑
 - 성능 최적화 연구
+- EAS 기반 신뢰 시스템 연구
 
 ### 🚀 **상용 개발**
 - 커스텀 블록체인 개발 기반
 - P2P 애플리케이션 네트워킹 라이브러리
 - 분산 시스템 컴포넌트
+- 신뢰 기반 애플리케이션
 
 ---
 
@@ -205,12 +213,12 @@ zig build run
 
 현재 **22개 Phase**로 구성된 상세한 개발 계획이 [TODO.md](TODO.md)에 있습니다.
 
-### 🎯 **현재 상태 (85% 완료)**
+### 🎯 **현재 상태 (90% 완료)**
 - ✅ P2P 네트워킹 및 자동 피어 발견
 - ✅ Proof of History 합의 메커니즘  
 - ✅ 스마트 컨트랙트 시스템
 - ✅ 포괄적 테스트 프레임워크
-- 🔄 메시지 처리 로직 완성 중
+- ✅ Eastsea Attestation Service (EAS)
 
 ### 🚀 **다음 계획**
 - **Phase 17**: CI/CD 자동화
