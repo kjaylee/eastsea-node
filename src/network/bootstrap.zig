@@ -228,17 +228,23 @@ pub const BootstrapClient = struct {
         var successful_connections: usize = 0;
 
         for (self.bootstrap_nodes.items) |*bootstrap_node| {
-            if (self.connectToBootstrapNode(bootstrap_node)) {
-                successful_connections += 1;
-                std.debug.print("✅ Successfully connected to bootstrap node: {s}:{}\n", .{ bootstrap_node.address, bootstrap_node.port });
-                
-                // Request peer list from this bootstrap node
-                self.requestPeerList(bootstrap_node) catch |err| {
-                    std.debug.print("⚠️  Failed to request peer list: {}\n", .{err});
-                };
-            } else |err| {
-                std.debug.print("❌ Failed to connect to bootstrap node {s}:{}: {}\n", .{ bootstrap_node.address, bootstrap_node.port, err });
+            // Skip if this is our own node
+            if (std.mem.eql(u8, bootstrap_node.address, self.local_address) and bootstrap_node.port == self.local_port) {
+                continue;
             }
+            
+            self.connectToBootstrapNode(bootstrap_node) catch |err| {
+                std.debug.print("❌ Failed to connect to bootstrap node {s}:{}: {}\n", .{ bootstrap_node.address, bootstrap_node.port, err });
+                continue;
+            };
+            
+            successful_connections += 1;
+            std.debug.print("✅ Successfully connected to bootstrap node: {s}:{}\n", .{ bootstrap_node.address, bootstrap_node.port });
+            
+            // Request peer list from this bootstrap node
+            self.requestPeerList(bootstrap_node) catch |err| {
+                std.debug.print("⚠️  Failed to request peer list: {}\n", .{err});
+            };
         }
 
         if (successful_connections == 0) {
@@ -259,9 +265,7 @@ pub const BootstrapClient = struct {
         const peer_address = try bootstrap_node.toNetAddress();
         
         // Try to connect via P2P
-        _ = self.p2p_node.?.connectToPeer(peer_address) catch |err| {
-            return err;
-        };
+        _ = try self.p2p_node.?.connectToPeer(peer_address);
 
         // Send bootstrap request
         try self.sendBootstrapRequest(bootstrap_node);

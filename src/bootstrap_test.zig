@@ -83,11 +83,18 @@ pub fn main() !void {
 
     // Start accepting connections in a separate thread
     const accept_thread = try std.Thread.spawn(.{}, acceptConnections, .{&p2p_node});
-    defer accept_thread.join();
+    defer {
+        // Give a small delay for thread to start
+        std.time.sleep(100_000_000); // 100ms
+        // Signal the P2P node to stop running
+        p2p_node.stop();
+        // Wait for the accept thread to finish
+        accept_thread.join();
+    }
 
     // Main loop
     var iteration: u32 = 0;
-    while (iteration < 30) { // Run for 30 iterations
+    while (iteration < 30 and p2p_node.isRunning()) { // Run for 30 iterations or until node stops
         iteration += 1;
         
         std.debug.print("\n--- Iteration {} ---\n", .{iteration});

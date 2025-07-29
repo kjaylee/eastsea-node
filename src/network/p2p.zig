@@ -277,12 +277,16 @@ pub const P2PNode = struct {
     }
 
     pub fn stop(self: *P2PNode) void {
+        self.running = false;
         if (self.server) |*server| {
             server.deinit();
             self.server = null;
         }
-        self.running = false;
         std.debug.print("🛑 P2P Node stopped\n", .{});
+    }
+
+    pub fn isRunning(self: *const P2PNode) bool {
+        return self.running;
     }
 
     pub fn connectToPeer(self: *P2PNode, peer_address: net.Address) !*PeerConnection {
@@ -336,10 +340,32 @@ pub const P2PNode = struct {
                 // Handle peer in separate thread (simplified for demo)
                 try self.handlePeer(peer);
             } else |err| {
+                // If we're no longer running, exit gracefully
+                if (!self.running) {
+                    return;
+                }
+                
                 if (err == error.WouldBlock) {
                     std.time.sleep(1000000); // 1ms
                     continue;
                 }
+                
+                // Ignore connection aborted errors when shutting down
+                if (err == error.ConnectionAborted) {
+                    if (!self.running) {
+                        return;
+                    }
+                    // Log and continue if still running
+                    std.debug.print("⚠️  Connection aborted, continuing to listen\n", .{});
+                    continue;
+                }
+                
+                // Handle BADF (Bad file descriptor) which can happen when server is closed
+                if (err == error.BadFileDescriptor) {
+                    std.debug.print("⚠️  Server socket closed, stopping accept loop\n", .{});
+                    return;
+                }
+                
                 return err;
             }
         }
