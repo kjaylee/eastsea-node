@@ -72,21 +72,3 @@ echo "🚀 Pushing to remote..."
 git push origin main
 
 echo "🎉 All done! Tests passed and changes pushed successfully."
-
-# 2. Git 작업
-echo "📝 Staging changes..."
-git add src/ README.md TODO.md build.zig docs/
-
-if git diff --cached --quiet; then
-    echo "ℹ️ No changes to commit"
-    exit 0
-fi
-
-echo "💾 Committing..."
-COMMIT_MSG="${1:-test: all tests passing - auto commit ✅}"
-git commit -m "$COMMIT_MSG"
-
-echo "🚀 Pushing to remote..."
-git push origin main
-
-echo "🎉 All done! Tests passed and changes pushed successfully."
