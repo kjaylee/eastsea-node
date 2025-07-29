@@ -280,6 +280,8 @@ pub const BootstrapClient = struct {
         // If DHT is available, add to DHT routing table
         if (self.dht_node) |dht_node| {
             var dht_node_entry = try dht.DHTNode.init(self.allocator, bootstrap_node.address, bootstrap_node.port);
+            errdefer dht_node_entry.deinit(self.allocator); // Clean up if addNode fails
+            
             const added = try dht_node.routing_table.addNode(dht_node_entry);
             // If the node wasn't added (e.g., bucket full), we need to clean it up
             if (!added) {
