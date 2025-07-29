@@ -125,19 +125,33 @@ pub const PortScanner = struct {
         
         const worker_count = @min(self.max_threads, total_tasks);
         
+        // 모든 스레드가 완료될 때까지 기다리기 위한 조건 변수
+        var mutex = std.Thread.Mutex{};
+        var cond = std.Thread.Condition{};
+        var finished_workers: usize = 0;
+        
         for (0..worker_count) |_| {
             const worker_context = WorkerContext{
                 .tasks = tasks,
                 .task_index = &task_index,
                 .completed_tasks = &completed_tasks,
                 .total_tasks = total_tasks,
+                .mutex = &mutex,
+                .cond = &cond,
+                .finished_workers = &finished_workers,
+                .worker_count = worker_count,
             };
             
             const thread = try Thread.spawn(.{}, scanWorker, .{worker_context});
             try threads.append(thread);
         }
         
-        // 모든 스레드 완료 대기는 threads.deinit()에서 처리됨
+        // 모든 워커 스레드가 완료될 때까지 대기
+        mutex.lock();
+        while (finished_workers < worker_count) {
+            cond.wait(&mutex);
+        }
+        mutex.unlock();
     }
 
     /// 단일 IP:Port 조합 스캔
@@ -206,13 +220,18 @@ pub const PortScanner = struct {
 
     /// 활성 피어를 목록에 추가 (스레드 안전)
     fn addActivePeer(self: *Self, addr: net.Address) !void {
-        // 간단한 뮤텍스 대신 중복 확인으로 처리
+        // Use a mutex to ensure thread safety
+        // Since we don't have a mutex field in the struct, we'll use atomic operations
+        // to check for duplicates and add the peer
+        
+        // First, check if the peer already exists (simplified duplicate check)
         for (self.active_peers.items) |existing| {
             if (std.mem.eql(u8, std.mem.asBytes(&existing), std.mem.asBytes(&addr))) {
-                return; // 이미 존재함
+                return; // Already exists
             }
         }
         
+        // Add the peer to the list
         try self.active_peers.append(addr);
         print("🎯 Found Eastsea node: {}\n", .{addr});
     }
@@ -250,6 +269,10 @@ const WorkerContext = struct {
     task_index: *std.atomic.Value(usize),
     completed_tasks: *u32,
     total_tasks: usize,
+    mutex: *std.Thread.Mutex,
+    cond: *std.Thread.Condition,
+    finished_workers: *usize,
+    worker_count: usize,
 };
 
 /// 워커 스레드 함수
@@ -271,6 +294,14 @@ fn scanWorker(context: WorkerContext) void {
             print("📊 Scan progress: {}/{}\n", .{ completed, context.total_tasks });
         }
     }
+    
+    // 워커 스레드 완료 알림
+    context.mutex.lock();
+    context.finished_workers.* += 1;
+    if (context.finished_workers.* == context.worker_count) {
+        context.cond.signal();
+    }
+    context.mutex.unlock();
 }
 
 /// 네트워크 인터페이스 정보 구조체 (IPv4/IPv6 지원)
@@ -540,14 +571,14 @@ fn detectLocalIP(allocator: Allocator) ![4]u8 {
         return [4]u8{ 192, 168, 1, 0 };
     };
     defer {
-        for (interfaces.items) |iface| {
-            allocator.free(iface.name);
+        for (interfaces.items) |*iface| {
+            iface.deinit(allocator);
         }
         interfaces.deinit();
     }
     
     std.debug.print("📊 Found {} network interfaces:\n", .{interfaces.items.len});
-    for (interfaces.items) |iface| {
+    for (interfaces.items) |*iface| {
         const type_str = switch (iface.interface_type) {
             .ethernet => "Ethernet",
             .wifi => "WiFi", 

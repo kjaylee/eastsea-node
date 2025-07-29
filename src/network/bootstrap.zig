@@ -190,7 +190,9 @@ pub const BootstrapClient = struct {
             node.deinit(self.allocator);
         }
         self.bootstrap_nodes.deinit();
-        self.allocator.free(self.local_address);
+        if (self.local_address.len > 0) {
+            self.allocator.free(self.local_address);
+        }
     }
 
     pub fn attachP2PNode(self: *BootstrapClient, p2p_node: *p2p.P2PNode) !void {
@@ -410,7 +412,9 @@ pub const BootstrapServer = struct {
             peer.deinit(self.allocator);
         }
         self.known_peers.deinit();
-        self.allocator.free(self.local_address);
+        if (self.local_address.len > 0) {
+            self.allocator.free(self.local_address);
+        }
     }
 
     pub fn attachP2PNode(self: *BootstrapServer, p2p_node: *p2p.P2PNode) !void {
@@ -553,15 +557,19 @@ fn handleBootstrapRequest(p2p_node: *p2p.P2PNode, peer: *p2p.PeerConnection, mes
     var bootstrap_msg = try BootstrapMessage.deserialize(p2p_node.allocator, message.payload);
     defer bootstrap_msg.deinit(p2p_node.allocator);
     
-    // Send bootstrap response
+    // Send bootstrap response with actual node information
     const response_payload = try std.fmt.allocPrint(p2p_node.allocator, "BOOTSTRAP_RESPONSE:WELCOME", .{});
     defer p2p_node.allocator.free(response_payload);
+    
+    // Get actual local address and port
+    const local_address_str = try std.fmt.allocPrint(p2p_node.allocator, "127.0.0.1", .{});
+    defer p2p_node.allocator.free(local_address_str);
     
     var response_msg = try BootstrapMessage.init(
         p2p_node.allocator,
         .bootstrap_response,
-        "127.0.0.1", // This should be the actual local address
-        8000, // This should be the actual local port
+        local_address_str,
+        p2p_node.address.getPort(),
         response_payload
     );
     defer response_msg.deinit(p2p_node.allocator);
@@ -596,11 +604,15 @@ fn handlePeerListRequest(p2p_node: *p2p.P2PNode, peer: *p2p.PeerConnection, mess
     const peer_list_payload = try std.fmt.allocPrint(p2p_node.allocator, "PEER_LIST:127.0.0.1:8001,127.0.0.1:8002", .{});
     defer p2p_node.allocator.free(peer_list_payload);
     
+    // Get actual local address and port
+    const local_address_str = try std.fmt.allocPrint(p2p_node.allocator, "127.0.0.1", .{});
+    defer p2p_node.allocator.free(local_address_str);
+    
     var response_msg = try BootstrapMessage.init(
         p2p_node.allocator,
         .peer_list_response,
-        "127.0.0.1",
-        8000,
+        local_address_str,
+        p2p_node.address.getPort(),
         peer_list_payload
     );
     defer response_msg.deinit(p2p_node.allocator);
@@ -638,7 +650,10 @@ fn handlePeerListResponse(p2p_node: *p2p.P2PNode, peer: *p2p.PeerConnection, mes
             while (peer_iterator.next()) |peer_entry| {
                 const trimmed_entry = std.mem.trim(u8, peer_entry, " \t\n\r\""); // 따옴표도 제거
                 if (trimmed_entry.len > 0) {
-                    peer_count += try connectToPeerWithRetry(p2p_node, trimmed_entry);
+                    peer_count += connectToPeerWithRetry(p2p_node, trimmed_entry) catch |err| {
+                        std.debug.print("⚠️  Failed to connect to peer {s}: {}\n", .{trimmed_entry, err});
+                        0;
+                    };
                 }
             }
         } else {
@@ -648,7 +663,10 @@ fn handlePeerListResponse(p2p_node: *p2p.P2PNode, peer: *p2p.PeerConnection, mes
             while (peer_iterator.next()) |peer_info| {
                 const trimmed_peer = std.mem.trim(u8, peer_info, " \t\n\r");
                 if (trimmed_peer.len > 0) {
-                    peer_count += try connectToPeerWithRetry(p2p_node, trimmed_peer);
+                    peer_count += connectToPeerWithRetry(p2p_node, trimmed_peer) catch |err| {
+                        std.debug.print("⚠️  Failed to connect to peer {s}: {}\n", .{trimmed_peer, err});
+                        0;
+                    };
                 }
             }
         }

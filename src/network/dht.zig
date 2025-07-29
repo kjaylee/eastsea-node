@@ -813,7 +813,9 @@ test "DHT routing table" {
     defer routing_table.deinit();
     
     const test_node = try DHTNode.init(allocator, "127.0.0.1", 8001);
-    defer test_node.deinit(allocator);
+    // Create a mutable copy for deinit
+    var mutable_test_node = test_node;
+    defer mutable_test_node.deinit(allocator);
     
     const added = try routing_table.addNode(test_node);
     try testing.expect(added);
@@ -836,7 +838,9 @@ test "DHT message serialization" {
     defer allocator.free(serialized);
     
     const deserialized_msg = try DHTMessage.deserialize(allocator, serialized);
-    defer deserialized_msg.deinit(allocator);
+    // Create a mutable copy for deinit
+    var mutable_msg = deserialized_msg;
+    defer mutable_msg.deinit(allocator);
     
     try testing.expect(deserialized_msg.type == .ping);
     try testing.expect(std.mem.eql(u8, &deserialized_msg.sender_id, &sender_id));
