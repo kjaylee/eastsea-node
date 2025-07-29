@@ -560,35 +560,35 @@ QUIC는 다음과 같은 고급 기능을 제공합니다:
 
 ```bash
 # QUIC 기본 연결 테스트
-zig build run-quic -- basic
+zig-out/bin/quic-test basic
 ```
 
 #### QUIC 멀티 스트림 테스트
 
 ```bash
 # QUIC 멀티 스트림 기능 테스트
-zig build run-quic -- streams
+zig-out/bin/quic-test streams
 ```
 
 #### QUIC 보안 기능 테스트
 
 ```bash
 # QUIC 보안 기능 테스트
-zig build run-quic -- security
+zig-out/bin/quic-test security
 ```
 
 #### QUIC 성능 벤치마크
 
 ```bash
 # QUIC 성능 벤치마크 테스트
-zig build run-quic -- performance
+zig-out/bin/quic-test performance
 ```
 
 #### 전체 QUIC 테스트
 
 ```bash
 # QUIC 모든 기능 테스트
-zig build run-quic -- all
+zig-out/bin/quic-test all
 ```
 
 ### 7. Eastsea Attestation Service (EAS) 테스트

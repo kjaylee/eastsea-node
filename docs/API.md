@@ -278,6 +278,10 @@ QUIC 프로토콜은 다음과 같은 고급 기능을 제공합니다:
 2. **0-RTT Connection Resumption**: 연결 재개 시 지연 시간 최소화
 3. **Connection Migration**: IP 주소 변경 시 연결 유지
 4. **Enhanced Security**: 연결 ID 암호화 및 패킷 인증
+5. **Flow Control**: 스트림 및 연결 수준의 흐름 제어
+6. **Congestion Control**: BBR 알고리즘 기반 혼잡 제어
+7. **Forward Secrecy**: Perfect Forward Secrecy 보장
+8. **Loss Recovery**: 빠른 손실 패킷 복구 (최대 20배 빠름)
 
 ---
 
