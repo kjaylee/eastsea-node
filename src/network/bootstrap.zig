@@ -272,8 +272,12 @@ pub const BootstrapClient = struct {
 
         // If DHT is available, add to DHT routing table
         if (self.dht_node) |dht_node| {
-            const dht_node_entry = try bootstrap_node.toDHTNode(self.allocator);
-            _ = try dht_node.routing_table.addNode(dht_node_entry);
+            var dht_node_entry = try bootstrap_node.toDHTNode(self.allocator);
+            const added = try dht_node.routing_table.addNode(dht_node_entry);
+            // If the node wasn't added (e.g., bucket full), we need to clean it up
+            if (!added) {
+                dht_node_entry.deinit(self.allocator);
+            }
         }
 
         bootstrap_node.last_seen = std.time.timestamp();
@@ -541,38 +545,37 @@ fn handleBootstrapRequest(p2p_node: *p2p.P2PNode, peer: *p2p.PeerConnection, mes
     _ = peer;
     std.debug.print("🔗 Bootstrap: Received bootstrap request\n", .{});
     
-    var bootstrap_msg = try BootstrapMessage.deserialize(std.heap.page_allocator, message.payload);
-    defer bootstrap_msg.deinit(std.heap.page_allocator);
+    var bootstrap_msg = try BootstrapMessage.deserialize(p2p_node.allocator, message.payload);
+    defer bootstrap_msg.deinit(p2p_node.allocator);
     
     // Send bootstrap response
-    const response_payload = try std.fmt.allocPrint(std.heap.page_allocator, "BOOTSTRAP_RESPONSE:WELCOME", .{});
-    defer std.heap.page_allocator.free(response_payload);
+    const response_payload = try std.fmt.allocPrint(p2p_node.allocator, "BOOTSTRAP_RESPONSE:WELCOME", .{});
+    defer p2p_node.allocator.free(response_payload);
     
     var response_msg = try BootstrapMessage.init(
-        std.heap.page_allocator,
+        p2p_node.allocator,
         .bootstrap_response,
         "127.0.0.1", // This should be the actual local address
         8000, // This should be the actual local port
         response_payload
     );
-    defer response_msg.deinit(std.heap.page_allocator);
+    defer response_msg.deinit(p2p_node.allocator);
     
-    const serialized = try response_msg.serialize(std.heap.page_allocator);
-    defer std.heap.page_allocator.free(serialized);
+    const serialized = try response_msg.serialize(p2p_node.allocator);
+    defer p2p_node.allocator.free(serialized);
     
-    var p2p_response = try p2p.P2PMessage.init(std.heap.page_allocator, @intFromEnum(BootstrapMessageType.bootstrap_response), serialized);
+    var p2p_response = try p2p.P2PMessage.init(p2p_node.allocator, @intFromEnum(BootstrapMessageType.bootstrap_response), serialized);
     defer p2p_response.deinit();
     
     try p2p_node.broadcastMessage(&p2p_response);
 }
 
 fn handleBootstrapResponse(p2p_node: *p2p.P2PNode, peer: *p2p.PeerConnection, message: *const p2p.P2PMessage) !void {
-    _ = p2p_node;
     _ = peer;
     std.debug.print("✅ Bootstrap: Received bootstrap response\n", .{});
     
-    var bootstrap_msg = try BootstrapMessage.deserialize(std.heap.page_allocator, message.payload);
-    defer bootstrap_msg.deinit(std.heap.page_allocator);
+    var bootstrap_msg = try BootstrapMessage.deserialize(p2p_node.allocator, message.payload);
+    defer bootstrap_msg.deinit(p2p_node.allocator);
     
     std.debug.print("📩 Bootstrap response from {s}:{}: {s}\n", .{ bootstrap_msg.sender_address, bootstrap_msg.sender_port, bootstrap_msg.payload });
 }
@@ -581,26 +584,26 @@ fn handlePeerListRequest(p2p_node: *p2p.P2PNode, peer: *p2p.PeerConnection, mess
     _ = peer;
     std.debug.print("📋 Bootstrap: Received peer list request\n", .{});
     
-    var bootstrap_msg = try BootstrapMessage.deserialize(std.heap.page_allocator, message.payload);
-    defer bootstrap_msg.deinit(std.heap.page_allocator);
+    var bootstrap_msg = try BootstrapMessage.deserialize(p2p_node.allocator, message.payload);
+    defer bootstrap_msg.deinit(p2p_node.allocator);
     
     // Create a mock peer list (in a real implementation, this would come from the bootstrap server)
-    const peer_list_payload = try std.fmt.allocPrint(std.heap.page_allocator, "PEER_LIST:127.0.0.1:8001,127.0.0.1:8002", .{});
-    defer std.heap.page_allocator.free(peer_list_payload);
+    const peer_list_payload = try std.fmt.allocPrint(p2p_node.allocator, "PEER_LIST:127.0.0.1:8001,127.0.0.1:8002", .{});
+    defer p2p_node.allocator.free(peer_list_payload);
     
     var response_msg = try BootstrapMessage.init(
-        std.heap.page_allocator,
+        p2p_node.allocator,
         .peer_list_response,
         "127.0.0.1",
         8000,
         peer_list_payload
     );
-    defer response_msg.deinit(std.heap.page_allocator);
+    defer response_msg.deinit(p2p_node.allocator);
     
-    const serialized = try response_msg.serialize(std.heap.page_allocator);
-    defer std.heap.page_allocator.free(serialized);
+    const serialized = try response_msg.serialize(p2p_node.allocator);
+    defer p2p_node.allocator.free(serialized);
     
-    var p2p_response = try p2p.P2PMessage.init(std.heap.page_allocator, @intFromEnum(BootstrapMessageType.peer_list_response), serialized);
+    var p2p_response = try p2p.P2PMessage.init(p2p_node.allocator, @intFromEnum(BootstrapMessageType.peer_list_response), serialized);
     defer p2p_response.deinit();
     
     try p2p_node.broadcastMessage(&p2p_response);
@@ -610,8 +613,8 @@ fn handlePeerListResponse(p2p_node: *p2p.P2PNode, peer: *p2p.PeerConnection, mes
     _ = peer;
     std.debug.print("📋 Bootstrap: Received peer list response\n", .{});
     
-    var bootstrap_msg = try BootstrapMessage.deserialize(std.heap.page_allocator, message.payload);
-    defer bootstrap_msg.deinit(std.heap.page_allocator);
+    var bootstrap_msg = try BootstrapMessage.deserialize(p2p_node.allocator, message.payload);
+    defer bootstrap_msg.deinit(p2p_node.allocator);
     
     std.debug.print("📋 Peer list from {s}:{}: {s}\n", .{ bootstrap_msg.sender_address, bootstrap_msg.sender_port, bootstrap_msg.payload });
     
@@ -655,8 +658,8 @@ fn handleNodeAnnouncement(p2p_node: *p2p.P2PNode, peer: *p2p.PeerConnection, mes
     _ = peer;
     std.debug.print("📢 Bootstrap: Received node announcement\n", .{});
     
-    var bootstrap_msg = try BootstrapMessage.deserialize(std.heap.page_allocator, message.payload);
-    defer bootstrap_msg.deinit(std.heap.page_allocator);
+    var bootstrap_msg = try BootstrapMessage.deserialize(p2p_node.allocator, message.payload);
+    defer bootstrap_msg.deinit(p2p_node.allocator);
     
     std.debug.print("📢 Node announcement from {s}:{}: {s}\n", .{ bootstrap_msg.sender_address, bootstrap_msg.sender_port, bootstrap_msg.payload });
     
