@@ -21,19 +21,24 @@ pub const BootstrapNodeConfig = struct {
     last_seen: i64 = 0,
 
     pub fn init(allocator: std.mem.Allocator, address: []const u8, port: u16) !BootstrapNodeConfig {
-        return BootstrapNodeConfig{
-            .address = try allocator.dupe(u8, address),
-            .port = port,
-            .last_seen = std.time.timestamp(),
-        };
-    }
+    const duped_address = try allocator.dupe(u8, address);
+    errdefer allocator.free(duped_address);
+    
+    return BootstrapNodeConfig{
+        .address = duped_address,
+        .port = port,
+        .last_seen = std.time.timestamp(),
+    };
+}
 
     pub fn deinit(self: *BootstrapNodeConfig, allocator: std.mem.Allocator) void {
         allocator.free(self.address);
     }
 
     pub fn toDHTNode(self: *const BootstrapNodeConfig, allocator: std.mem.Allocator) !dht.DHTNode {
-        return try dht.DHTNode.init(allocator, self.address, self.port);
+        var dht_node = try dht.DHTNode.init(allocator, self.address, self.port);
+        errdefer dht_node.deinit(allocator);
+        return dht_node;
     }
 
     pub fn toNetAddress(self: *const BootstrapNodeConfig) !net.Address {
@@ -272,7 +277,7 @@ pub const BootstrapClient = struct {
 
         // If DHT is available, add to DHT routing table
         if (self.dht_node) |dht_node| {
-            var dht_node_entry = try bootstrap_node.toDHTNode(self.allocator);
+            var dht_node_entry = try dht.DHTNode.init(self.allocator, bootstrap_node.address, bootstrap_node.port);
             const added = try dht_node.routing_table.addNode(dht_node_entry);
             // If the node wasn't added (e.g., bucket full), we need to clean it up
             if (!added) {
