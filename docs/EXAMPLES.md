@@ -1990,8 +1990,94 @@ pub fn main() !void {
 }
 ```
 
+### 2. EAS Usage Example
+
+```zig
+// eas_example.zig - Example usage of Eastsea Attestation Service
+
+const std = @import("std");
+const eas = @import("../src/eas/attestation.zig");
+
+pub fn main() !void {
+    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+    defer _ = gpa.deinit();
+    const allocator = gpa.allocator();
+    
+    std.log.info("🔐 Eastsea Attestation Service (EAS) Example");
+    std.log.info("============================================");
+    
+    // Initialize EAS service
+    var service = eas.AttestationService.init(allocator);
+    defer service.deinit();
+    
+    // Create a schema for identity verification
+    var identity_schema = try eas.Schema.init(
+        allocator,
+        "Identity Verification",
+        "Verification of user identity information",
+        "{\"type\": \"object\", \"properties\": {\"name\": {\"type\": \"string\"}, \"id\": {\"type\": \"string\"}}}",
+        [_]u8{1} ** 20, // Creator ID
+    );
+    defer identity_schema.deinit();
+    
+    // Register the schema
+    try service.registerSchema(identity_schema);
+    std.log.info("✅ Registered identity verification schema");
+    
+    // Create an attester (identity verification service)
+    var id_verifier = try eas.Attester.init(
+        allocator,
+        "Government ID Verification Service",
+        [_]u8{2} ** 20, // Attester ID
+    );
+    defer id_verifier.deinit();
+    
+    // Register the attester
+    try service.registerAttester(id_verifier);
+    std.log.info("✅ Registered identity verifier attester");
+    
+    // Create an attestation for a user
+    const user_id = [_]u8{3} ** 20; // User ID
+    const private_key = [_]u8{4} ** 32; // Private key for signing
+    
+    const attestation = try service.createAttestation(
+        identity_schema.id,
+        id_verifier.id,
+        user_id,
+        0, // Never expires
+        "{\"name\": \"Alice Smith\", \"id\": \"ID123456\"}",
+        private_key,
+    );
+    
+    std.log.info("✅ Created identity attestation for user");
+    std.log.info("   Attestation ID: {}", .{std.fmt.fmtSliceHexLower(&attestation.id)});
+    
+    // Verify the attestation
+    const is_valid = service.verifyAttestation(attestation.id);
+    std.log.info("✅ Attestation verification: {}", .{is_valid});
+    
+    // Get attestations for the user
+    const user_attestations = try service.getAttestationsForRecipient(user_id);
+    defer user_attestations.deinit();
+    
+    std.log.info("📋 User has {} attestations", .{user_attestations.items.len});
+    
+    // Print attestation details
+    if (user_attestations.items.len > 0) {
+        const user_attestation = user_attestations.items[0];
+        std.log.info("   Schema: {}", .{std.fmt.fmtSliceHexLower(&user_attestation.schema_id)});
+        std.log.info("   Attester: {}", .{std.fmt.fmtSliceHexLower(&user_attestation.attester)});
+        std.log.info("   Data: {s}", .{user_attestation.data});
+    }
+    
+    std.log.info("🎉 EAS example completed successfully!");
+}
+```
+
 ---
 
 This comprehensive collection of examples demonstrates various aspects of the Eastsea blockchain system, from basic usage to advanced features and optimizations. Each example is designed to be educational and practical, showing real-world usage patterns and best practices.
 
 With the addition of QUIC support, Eastsea now provides both TCP and QUIC networking options, giving developers flexibility in choosing the most appropriate protocol for their use case. The QUIC implementation provides enhanced performance, security, and connection management features that complement the existing TCP-based networking stack.
+
+With the addition of Eastsea Attestation Service (EAS), Eastsea now provides a robust framework for off-chain data verification, enabling trust-based applications and services to be built on top of the blockchain.

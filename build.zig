@@ -316,6 +316,48 @@ pub fn build(b: *std.Build) void {
     const phase9_test_run_step = b.step("run-phase9", "Run Phase 9 comprehensive testing framework");
     phase9_test_run_step.dependOn(&phase9_test_run_cmd.step);
 
+    // EAS (Eastsea Attestation Service) Test executable
+    const eas_test_exe = b.addExecutable(.{
+        .name = "eas-test",
+        .root_source_file = b.path("src/eas_test.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+
+    b.installArtifact(eas_test_exe);
+
+    // EAS Test run command
+    const eas_test_run_cmd = b.addRunArtifact(eas_test_exe);
+    eas_test_run_cmd.step.dependOn(b.getInstallStep());
+
+    if (b.args) |args| {
+        eas_test_run_cmd.addArgs(args);
+    }
+
+    const eas_test_run_step = b.step("run-eas", "Run Eastsea Attestation Service test");
+    eas_test_run_step.dependOn(&eas_test_run_cmd.step);
+
+    // EAS Use Cases Test executable
+    const eas_use_cases_test_exe = b.addExecutable(.{
+        .name = "eas-use-cases-test",
+        .root_source_file = b.path("src/eas_use_cases_test.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+
+    b.installArtifact(eas_use_cases_test_exe);
+
+    // EAS Use Cases Test run command
+    const eas_use_cases_test_run_cmd = b.addRunArtifact(eas_use_cases_test_exe);
+    eas_use_cases_test_run_cmd.step.dependOn(b.getInstallStep());
+
+    if (b.args) |args| {
+        eas_use_cases_test_run_cmd.addArgs(args);
+    }
+
+    const eas_use_cases_test_run_step = b.step("run-eas-use-cases", "Run Eastsea Attestation Service use cases test");
+    eas_use_cases_test_run_step.dependOn(&eas_use_cases_test_run_cmd.step);
+
     // QUIC Protocol Test executable (Phase 13)
     const quic_test_exe = b.addExecutable(.{
         .name = "quic-test",
@@ -326,37 +368,25 @@ pub fn build(b: *std.Build) void {
 
     b.installArtifact(quic_test_exe);
 
-    // QUIC Test run command
-    const quic_test_run_cmd = b.addRunArtifact(quic_test_exe);
-    quic_test_run_cmd.step.dependOn(b.getInstallStep());
+    // Web Server Test executable
+    const web_server_test_exe = b.addExecutable(.{
+        .name = "web-server-test",
+        .root_source_file = b.path("src/web_server_test.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+
+    b.installArtifact(web_server_test_exe);
+
+    // Web Server Test run command
+    const web_server_test_run_cmd = b.addRunArtifact(web_server_test_exe);
+    web_server_test_run_cmd.step.dependOn(b.getInstallStep());
 
     if (b.args) |args| {
-        quic_test_run_cmd.addArgs(args);
+        web_server_test_run_cmd.addArgs(args);
     }
 
-    const quic_test_run_step = b.step("run-quic", "Run QUIC protocol test (Phase 13)");
-    quic_test_run_step.dependOn(&quic_test_run_cmd.step);
+    const web_server_test_run_step = b.step("run-web-server", "Run the Web Server test");
+    web_server_test_run_step.dependOn(&web_server_test_run_cmd.step);
 
-
-    // Tests
-    const unit_tests = b.addTest(.{
-        .root_source_file = b.path("src/main.zig"),
-        .target = target,
-        .optimize = optimize,
-    });
-
-    const run_unit_tests = b.addRunArtifact(unit_tests);
-
-    const test_step = b.step("test", "Run unit tests");
-    test_step.dependOn(&run_unit_tests.step);
-
-    // Library for reusable components
-    const lib = b.addStaticLibrary(.{
-        .name = "eastsea",
-        .root_source_file = b.path("src/lib.zig"),
-        .target = target,
-        .optimize = optimize,
-    });
-
-    b.installArtifact(lib);
 }

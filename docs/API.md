@@ -8,6 +8,7 @@ Eastsea는 Zig로 구현된 블록체인 클론으로, 다음과 같은 주요 A
 - **P2P Network API**: 노드 간 통신 및 피어 관리 (TCP/QUIC 하이브리드)
 - **Wallet API**: 계정 관리 및 트랜잭션 서명
 - **Smart Contract API**: 프로그램 실행 및 관리
+- **Attestation Service API**: 오프체인 증명 생성 및 검증
 
 ---
 
@@ -406,6 +407,83 @@ pub const VotingProgram = struct {
 };
 ```
 
+## Attestation Service API
+
+Eastsea Attestation Service (EAS) API는 오프체인 데이터 검증을 위한 인터페이스입니다.
+
+### Attestation Interface
+
+#### 1. Attestation Structure
+```zig
+pub const Attestation = struct {
+    id: [32]u8,
+    schema_id: [32]u8,
+    attester: [20]u8,
+    recipient: [20]u8,
+    timestamp: u64,
+    expiration: u64,
+    revocation_time: u64,
+    data: []const u8,
+    signature: [64]u8,
+    hash: [32]u8,
+    
+    pub fn verify(self: *const Attestation) bool {
+        // Verify attestation signature and validity
+    }
+};
+```
+
+#### 2. Schema Structure
+```zig
+pub const Schema = struct {
+    id: [32]u8,
+    name: []const u8,
+    description: []const u8,
+    definition: []const u8,  // JSON schema definition
+    creator: [20]u8,
+    timestamp: u64,
+};
+```
+
+#### 3. Attester Structure
+```zig
+pub const Attester = struct {
+    id: [20]u8,
+    name: []const u8,
+    reputation: u64,
+    attestation_count: u64,
+    registration_time: u64,
+    is_active: bool,
+};
+```
+
+#### 4. Attestation Service Methods
+```zig
+pub const AttestationService = struct {
+    pub fn createAttestation(
+        self: *AttestationService,
+        schema_id: [32]u8,
+        attester_id: [20]u8,
+        recipient: [20]u8,
+        expiration: u64,
+        data: []const u8,
+        private_key: [32]u8
+    ) !*Attestation;
+    
+    pub fn verifyAttestation(self: *AttestationService, attestation_id: [32]u8) bool;
+    
+    pub fn revokeAttestation(self: *AttestationService, attestation_id: [32]u8) !void;
+    
+    pub fn registerSchema(self: *AttestationService, schema: Schema) !void;
+    
+    pub fn registerAttester(self: *AttestationService, attester: Attester) !void;
+    
+    pub fn getAttestationsForRecipient(self: *AttestationService, recipient: [20]u8) ![]*Attestation;
+    
+    pub fn getAttestationsByAttester(self: *AttestationService, attester_id: [20]u8) ![]*Attestation;
+};
+```
+
 ---
 
 ## DHT (Distributed Hash Table) API
@@ -460,6 +538,9 @@ pub fn bootstrap(bootstrap_nodes: []const DHTNode) !void {
 | -3 | Invalid signature | Transaction signature is invalid |
 | -4 | Block not found | Requested block does not exist |
 | -5 | Transaction not found | Requested transaction does not exist |
+| -6 | Attestation not found | Requested attestation does not exist |
+| -7 | Schema not found | Requested schema does not exist |
+| -8 | Attester not found | Requested attester does not exist |
 
 ### Network Error Codes
 
@@ -470,6 +551,15 @@ pub fn bootstrap(bootstrap_nodes: []const DHTNode) !void {
 | `InvalidMessage` | Received invalid message format |
 | `HandshakeFailed` | Peer handshake failed |
 | `VersionMismatch` | Protocol version mismatch |
+
+### Attestation Error Codes
+
+| Code | Description |
+|------|-------------|
+| `AttestationExpired` | Attestation has expired |
+| `AttestationRevoked` | Attestation has been revoked |
+| `InvalidSignature` | Attestation signature is invalid |
+| `SchemaMismatch` | Attestation schema does not match |
 
 ---
 
@@ -503,6 +593,11 @@ curl -X POST http://localhost:8545 \
 curl -X POST http://localhost:8545 \
   -H "Content-Type: application/json" \
   -d '{"jsonrpc":"2.0","method":"getBalance","params":["ff7580ebeca78b5468b42e182fff7e8e820c37c3"],"id":2}'
+
+# Verify attestation
+curl -X POST http://localhost:8545 \
+  -H "Content-Type: application/json" \
+  -d '{"jsonrpc":"2.0","method":"verifyAttestation","params":["d801073b434d52a467257dafc93f971052c6d2e857fff2b4e57087b7b024b984"],"id":3}'
 ```
 
 ### DHT Network Testing
@@ -513,6 +608,16 @@ zig build run-dht -- 8000
 
 # Connect to DHT network
 zig build run-dht -- 8001 8000
+```
+
+### EAS Testing
+
+```bash
+# Run all EAS tests
+zig build run-eas -- all
+
+# Run specific EAS test
+zig build run-eas -- verification
 ```
 
 ---

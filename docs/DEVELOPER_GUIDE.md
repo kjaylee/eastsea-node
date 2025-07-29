@@ -22,6 +22,7 @@ Eastsea는 Zig 언어로 구현된 블록체인 클론으로, 다음과 같은 �
 - **DHT를 통한 자동 피어 발견**
 - **스마트 컨트랙트 (Programs) 지원**
 - **JSON-RPC API**
+- **Eastsea Attestation Service (EAS)**
 - **통합 지갑 시스템**
 
 ### Technology Stack
@@ -31,6 +32,7 @@ Eastsea는 Zig 언어로 구현된 블록체인 클론으로, 다음과 같은 �
 - **Cryptography**: SHA-256, ECDSA
 - **Serialization**: Custom binary protocol
 - **Testing**: Zig built-in test framework
+- **Attestation Service**: EAS (Eastsea Attestation Service)
 
 ---
 
@@ -125,6 +127,8 @@ src/
 │   └── account.zig         # Account management
 ├── consensus/               # Consensus mechanisms
 │   └── poh.zig             # Proof of History
+├── eas/                     # Eastsea Attestation Service
+│   └── attestation.zig      # Attestation, Schema, Attester structures
 ├── network/                 # Networking layer
 │   ├── p2p.zig             # P2P networking (TCP)
 │   ├── quic.zig            # QUIC networking
@@ -263,6 +267,60 @@ pub const QuicNode = struct {
     pub fn broadcast(self: *QuicNode, message: Message) !void {
         // Broadcast message to all QUIC connections
     }
+};
+```
+
+### 4. Smart Contracts (`src/programs/`)
+
+#### Program Interface
+```zig
+pub const ProgramInterface = struct {
+    pub fn execute(program_id: [32]u8, instruction: Instruction) !ProgramResult {
+        // Execute program instruction
+    }
+    
+    pub fn getState(program_id: [32]u8) ![]u8 {
+        // Get program state
+    }
+};
+
+### 5. Attestation Service (`src/eas/`)
+
+#### Attestation Structure
+```zig
+pub const Attestation = struct {
+    id: [32]u8,
+    schema_id: [32]u8,
+    attester: [20]u8,
+    recipient: [20]u8,
+    timestamp: u64,
+    expiration: u64,
+    revocation_time: u64,
+    data: []const u8,
+    signature: [64]u8,
+    hash: [32]u8,
+    
+    pub fn verify(self: *const Attestation) bool {
+        // Verify attestation signature and validity
+    }
+};
+
+pub const Schema = struct {
+    id: [32]u8,
+    name: []const u8,
+    description: []const u8,
+    definition: []const u8,
+    creator: [20]u8,
+    timestamp: u64,
+};
+
+pub const Attester = struct {
+    id: [20]u8,
+    name: []const u8,
+    reputation: u64,
+    attestation_count: u64,
+    registration_time: u64,
+    is_active: bool,
 };
 ```
 
