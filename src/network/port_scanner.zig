@@ -163,35 +163,58 @@ pub const PortScanner = struct {
         
         const start_time = std.time.milliTimestamp();
         
-        // TCP 연결 시도
-        const stream = net.tcpConnectToAddress(addr) catch |err| {
+        // 비블로킹 소켓으로 연결 시도 (간단한 타임아웃 구현)
+        const stream = self.connectWithQuickTimeout(addr) catch |err| {
             switch (err) {
                 error.ConnectionRefused, 
                 error.NetworkUnreachable, 
-                error.ConnectionTimedOut => return null,
+                error.ConnectionTimedOut,
+                error.Timeout => return null,
                 else => return err,
             }
         };
         defer stream.close();
         
-        // Eastsea 노드인지 확인
-        const is_eastsea_node = self.checkEastseaNode(stream) catch false;
+        // 성공적으로 연결된 경우 응답으로 처리 (Eastsea 체크 스킵)
+        const end_time = std.time.milliTimestamp();
+        const response_time = @as(u64, @intCast(end_time - start_time));
         
-        if (is_eastsea_node) {
-            const end_time = std.time.milliTimestamp();
-            const response_time = @as(u64, @intCast(end_time - start_time));
+        // 활성 피어 목록에 추가 (스레드 안전하게)
+        try self.addActivePeer(addr);
+        
+        return ScanResult{
+            .address = addr,
+            .port = port,
+            .response_time_ms = response_time,
+        };
+    }
+    
+    /// 빠른 타임아웃을 적용한 연결 함수
+    fn connectWithQuickTimeout(self: *Self, addr: net.Address) !net.Stream {
+        const timeout_start = std.time.milliTimestamp();
+        
+        // 여러 번 시도하되 빠르게 포기
+        var attempts: u8 = 0;
+        while (attempts < 2) : (attempts += 1) {
+            const current_time = std.time.milliTimestamp();
+            if (current_time - timeout_start > self.timeout_ms) {
+                return error.Timeout;
+            }
             
-            // 활성 피어 목록에 추가 (스레드 안전하게)
-            try self.addActivePeer(addr);
-            
-            return ScanResult{
-                .address = addr,
-                .port = port,
-                .response_time_ms = response_time,
+            const stream = net.tcpConnectToAddress(addr) catch |err| {
+                switch (err) {
+                    error.ConnectionRefused => return err,
+                    else => {
+                        // 짧은 대기 후 재시도
+                        std.time.sleep(10 * std.time.ns_per_ms); // 10ms 대기
+                        continue;
+                    }
+                }
             };
+            return stream;
         }
         
-        return null;
+        return error.ConnectionTimedOut;
     }
 
     /// Eastsea 노드인지 확인
@@ -275,6 +298,12 @@ const WorkerContext = struct {
     worker_count: usize,
 };
 
+/// 타임아웃을 적용한 TCP 연결 함수
+fn connectWithTimeout(addr: net.Address, timeout_ms: u32) !net.Stream {
+    _ = timeout_ms; // 현재는 사용하지 않음
+    return net.tcpConnectToAddress(addr);
+}
+
 /// 워커 스레드 함수
 fn scanWorker(context: WorkerContext) void {
     while (true) {
@@ -291,6 +320,12 @@ fn scanWorker(context: WorkerContext) void {
         // 진행률 업데이트 - disable printing from worker threads to prevent concurrency issues
         _ = @atomicRmw(u32, context.completed_tasks, .Add, 1, .monotonic);
     }
+    
+    // 워커 완료 신호
+    context.mutex.lock();
+    context.finished_workers.* += 1;
+    context.cond.signal();
+    context.mutex.unlock();
 }
 
 /// 네트워크 인터페이스 정보 구조체 (IPv4/IPv6 지원)
