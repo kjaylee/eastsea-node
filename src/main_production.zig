@@ -22,6 +22,16 @@ const diagnostics = @import("diagnostics.zig");
 const persistence = @import("persistence.zig");
 const rbac = @import("rbac.zig");
 const web_dashboard = @import("web_dashboard.zig");
+const upnp = @import("upnp.zig");
+
+/// ~/.eastsea 경로 결정
+fn getEastseaHome(allocator: std.mem.Allocator) ![]u8 {
+    const home = std.process.getEnvVarOwned(allocator, "HOME") catch {
+        return try allocator.dupe(u8, "/tmp");
+    };
+    defer allocator.free(home);
+    return try std.fmt.allocPrint(allocator, "{s}/.eastsea", .{home});
+}
 
 pub fn main() !void {
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
@@ -74,7 +84,14 @@ pub fn main() !void {
     // ========================================
     print("\n📋 Phase 1: 온보딩 설정...\n", .{});
 
-    const config_path = "/tmp/eastsea_config.json";
+    const eastsea_home = try getEastseaHome(allocator);
+    defer allocator.free(eastsea_home);
+
+    // ~/.eastsea/ 디렉토리 보장
+    try onboarding.validateDataPath(eastsea_home);
+
+    const config_path = try std.fmt.allocPrint(allocator, "{s}/config.json", .{eastsea_home});
+    defer allocator.free(config_path);
     const node_config = try onboarding.saveInitialConfig(allocator, config_path);
 
     print("   node_port={d}, rpc_port={d}, validator={}\n", .{
@@ -96,11 +113,24 @@ pub fn main() !void {
     );
 
     // ========================================
+    // Phase 2.5: UPnP 포트 자동 매핑
+    // ========================================
+    print("\n🔓 Phase 2.5: UPnP 포트 매핑...\n", .{});
+    var upnp_client = upnp.UPnP.init(allocator);
+    defer upnp_client.deinit();
+    if (upnp_client.discover() catch false) {
+        upnp_client.autoMapNodePorts(node_config.node_port, node_config.rpc_port);
+    } else {
+        print("   ⚠️  UPnP 미지원 라우터 — 수동 포트 포워딩 필요\n", .{});
+    }
+
+    // ========================================
     // Phase 3: 저장소 초기화 (REQ-110)
     // ========================================
     print("📦 Phase 3: 저장소 초기화...\n", .{});
 
-    const data_dir = "/tmp/eastsea_data";
+    const data_dir = try std.fmt.allocPrint(allocator, "{s}/data", .{eastsea_home});
+    defer allocator.free(data_dir);
     try onboarding.validateDataPath(data_dir);
 
     const storage_meta = try storage_init.autoInitStorage(allocator, data_dir);
@@ -244,7 +274,7 @@ fn runProductionNode(allocator: std.mem.Allocator, config: onboarding.NodeConfig
             }
 
             // 상태 영속화 (REQ-010)
-            persistence.saveState(allocator, "/tmp/eastsea_data/state.json", .{
+            persistence.saveState(allocator, "/tmp/.eastsea_state.json", .{
                 .block_height = chain.getHeight(),
                 .peer_count = @intCast(node.getPeerCount()),
                 .last_checkpoint = current_time,
@@ -372,7 +402,7 @@ fn runDemo(allocator: std.mem.Allocator, config: onboarding.NodeConfig) !void {
 
     // Demo 9: 상태 영속화 (REQ-010)
     print("\n9️⃣  상태 영속화...\n", .{});
-    const state_path = "/tmp/eastsea_data/state.json";
+    const state_path = "/tmp/.eastsea_state.json";
     try persistence.saveState(allocator, state_path, .{
         .block_height = chain.getHeight(),
         .peer_count = @intCast(node.getPeerCount()),

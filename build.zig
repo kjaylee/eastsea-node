@@ -106,6 +106,7 @@ pub fn build(b: *std.Build) void {
         "src/diagnostics.zig",
         "src/monitoring.zig",
         "src/cluster.zig",
+        "src/upnp.zig",
     };
 
     inline for (module_tests) |src| {
