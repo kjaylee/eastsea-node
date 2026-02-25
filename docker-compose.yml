@@ -1,0 +1,28 @@
+# =============================================================================
+# Eastsea Node - Docker Compose
+# REQ-104: docker compose up 원클릭 실행
+# =============================================================================
+
+services:
+  eastsea-node:
+    build: .
+    container_name: eastsea-node
+    ports:
+      - "${NODE_PORT:-8000}:8000" # P2P
+      - "${RPC_PORT:-8545}:8545" # RPC API
+      - "${QUIC_PORT:-9000}:9000" # QUIC
+    volumes:
+      - eastsea-data:/data/eastsea
+    environment:
+      - EASTSEA_LOG_LEVEL=${LOG_LEVEL:-info}
+    restart: unless-stopped
+    healthcheck:
+      test: [ "CMD", "curl", "-sf", "http://localhost:8545/" ]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+volumes:
+  eastsea-data:
+    driver: local
