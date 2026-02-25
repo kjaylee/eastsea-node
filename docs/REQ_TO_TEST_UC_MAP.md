@@ -5,33 +5,65 @@
 
 ## 1) 100% 추적 표
 
-| Req ID | UT 매핑 | TC 매핑 | UC 매핑 | UX/여정 매핑 |
-|---|---|---|---|---|
-| REQ-100 | UT-100-01, UT-100-02, UT-100-03 | TC-INSTALL-001, TC-INSTALL-002, TC-INSTALL-005, TC-INSTALL-006, TC-DOCKER-001 | UC-01, UC-02 | Phase 1, Phase 2 |
-| REQ-101 | UT-101-01, UT-101-02 | TC-INSTALL-004, TC-INSTALL-003, TC-INSTALL-005 | UC-01, UC-06 | Phase 1 |
-| REQ-102 | UT-102-01, UT-102-02 | TC-INSTALL-001, TC-UPDATE-001, TC-UPDATE-002, TC-UNINSTALL-001 | UC-04, UC-05, UC-10 | Phase 1, Phase 5 |
-| REQ-103 | UT-103-01 | TC-INSTALL-006 | UC-01, UC-02 | Phase 1 |
-| REQ-104 | UT-104-01 | TC-DOCKER-001 | UC-02 | Phase 2 |
-| REQ-110 | UT-110-01, UT-110-02 | TC-RUN-001, TC-RUN-005, TC-ONEFLOW-001 | UC-01, UC-02 | Phase 2, Phase 3 |
-| REQ-111 | UT-111-01, UT-111-02 | TC-INSTALL-003, TC-RUN-001, TC-RUN-004 | UC-06 | Phase 1, Phase 4 |
-| REQ-112 | UT-112-01 | TC-SEC-003, TC-ONEFLOW-002 | UC-08, UC-01 | Phase 2, Phase 4 |
-| REQ-120 | UT-120-01, UT-120-02, UT-120-03 | TC-UPDATE-001, TC-UPDATE-002, TC-UPDATE-003, TC-UPDATE-005 | UC-04, UC-05 | Phase 3, Phase 4, Phase 5 |
-| REQ-121 | UT-121-01, UT-121-02, UT-121-03 | TC-RUN-001, TC-RUN-002, TC-RUN-003, TC-RUN-004, TC-RUN-005 | UC-03, UC-08 | Phase 3 |
-| REQ-122 | UT-122-01 | TC-NODE-003 | UC-14 | Phase 3 |
-| REQ-001 | UT-001-01, UT-001-02 | TC-SEC-001, TC-SEC-002, TC-API-001 | UC-09 | Phase 2 |
-| REQ-002 | UT-002-01 | TC-SEC-001, TC-SEC-002, TC-API-001 | UC-09 | Phase 2 |
-| REQ-010 | UT-010-01, UT-010-02, UT-010-03 | TC-UNINSTALL-002, TC-RUN-001, TC-UNINSTALL-001 | UC-07, UC-10 | Phase 3 |
-| REQ-021 | UT-021-01 | TC-API-001, TC-API-002 | UC-01, UC-02 | Phase 2 |
-| REQ-040 | UT-040-01, UT-040-02 | TC-SEC-003, TC-SEC-002 | UC-09, UC-08 | Phase 2, Phase 4 |
-| REQ-050 | TC-CI-001 | TC-CI-001 | UC-12 | Phase 5 |
-| REQ-051 | UT-120-01, UT-120-03, UT-120-02 | TC-UPDATE-002, TC-UPDATE-003, TC-UPDATE-005 | UC-04, UC-05 | Phase 3, Phase 4 |
-| REQ-060 | TC-DOC-001 | TC-DOC-001 | UC-12 | Phase 5 |
+### 현재 진행 반영 스냅샷(순차 운영)
+- 기준 단계: `단계 1` (패키징/온보딩 우선 동작)
+- 기준 규칙:
+  - 현재 단계의 Req: `진행`
+  - 현재 단계 이전 Req: `완료`
+  - 다음 단계 Req: `미진행`
+  - 대상 항목의 하위 항목(UT/TC/UC/UX) 준비 시 `준비중`로 선표기
+
+### 단계 1 실행 큐(현재)
+- Active: `REQ-100` (온보딩/설치 핵심 동선)
+- In Progress: `REQ-101`, `REQ-103`, `REQ-104`, `REQ-111`
+- Ready: `REQ-102`, `REQ-120`, `REQ-121` (단계2 진입 조건 충족 시)
+
+| Req ID | 우선순위 | 단계 | 상태 | UT 매핑 | UT 상태 | TC 매핑 | TC 상태 | UC 매핑 | UC 상태 | UX/여정 매핑 | UX 상태 |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| REQ-100 | P0 | 단계 1 | 진행 | UT-100-01, UT-100-02, UT-100-03 | 준비중 | TC-INSTALL-001, TC-INSTALL-002, TC-INSTALL-005, TC-INSTALL-006, TC-DOCKER-001 | 준비중 | UC-01, UC-02 | 준비중 | Phase 1, Phase 2 | 준비중 |
+| REQ-101 | P0 | 단계 1 | 진행 | UT-101-01, UT-101-02 | 준비중 | TC-INSTALL-004, TC-INSTALL-003, TC-INSTALL-005 | 준비중 | UC-01, UC-06 | 준비중 | Phase 1 | 준비중 |
+| REQ-102 | P0 | 단계 3 | 미진행 | UT-102-01, UT-102-02 | 미진행 | TC-INSTALL-001, TC-UPDATE-001, TC-UPDATE-002, TC-UNINSTALL-001 | 미진행 | UC-04, UC-05, UC-10 | 미진행 | Phase 1, Phase 5 | 미진행 |
+| REQ-103 | P1 | 단계 1 | 진행 | UT-103-01 | 준비중 | TC-INSTALL-006 | 준비중 | UC-01, UC-02 | 준비중 | Phase 1 | 준비중 |
+| REQ-104 | P1 | 단계 1 | 진행 | UT-104-01 | 준비중 | TC-DOCKER-001 | 준비중 | UC-02 | 준비중 | Phase 2 | 준비중 |
+| REQ-110 | P0 | 단계 2 | 미진행 | UT-110-01, UT-110-02 | 미진행 | TC-RUN-001, TC-RUN-005, TC-ONEFLOW-001 | 미진행 | UC-01, UC-02 | 미진행 | Phase 2, Phase 3 | 미진행 |
+| REQ-111 | P1 | 단계 1 | 진행 | UT-111-01, UT-111-02 | 준비중 | TC-INSTALL-003, TC-RUN-001, TC-RUN-004 | 준비중 | UC-06 | 준비중 | Phase 1, Phase 4 | 준비중 |
+| REQ-112 | P2 | 단계 4 | 미진행 | UT-112-01 | 미진행 | TC-SEC-003, TC-ONEFLOW-002 | 미진행 | UC-08, UC-01 | 미진행 | Phase 2, Phase 4 | 미진행 |
+| REQ-120 | P0 | 단계 3 | 미진행 | UT-120-01, UT-120-02, UT-120-03 | 미진행 | TC-UPDATE-001, TC-UPDATE-002, TC-UPDATE-003, TC-UPDATE-005 | 미진행 | UC-04, UC-05 | 미진행 | Phase 3, Phase 4, Phase 5 | 미진행 |
+| REQ-121 | P1 | 단계 3 | 미진행 | UT-121-01, UT-121-02, UT-121-03 | 미진행 | TC-RUN-001, TC-RUN-002, TC-RUN-003, TC-RUN-004, TC-RUN-005 | 미진행 | UC-03, UC-08 | 미진행 | Phase 3 | 미진행 |
+| REQ-122 | P2 | 단계 4 | 미진행 | UT-122-01 | 미진행 | TC-NODE-003 | 미진행 | UC-14 | 미진행 | Phase 3 | 미진행 |
+| REQ-001 | P0 | 단계 2 | 미진행 | UT-001-01, UT-001-02 | 미진행 | TC-SEC-001, TC-SEC-002, TC-API-001 | 미진행 | UC-09 | 미진행 | Phase 2 | 미진행 |
+| REQ-002 | P1 | 단계 3 | 미진행 | UT-002-01 | 미진행 | TC-SEC-001, TC-SEC-002, TC-API-001 | 미진행 | UC-09 | 미진행 | Phase 2 | 미진행 |
+| REQ-010 | P0 | 단계 3 | 미진행 | UT-010-01, UT-010-02, UT-010-03 | 미진행 | TC-UNINSTALL-002, TC-RUN-001, TC-UNINSTALL-001 | 미진행 | UC-07, UC-10 | 미진행 | Phase 3 | 미진행 |
+| REQ-021 | P0 | 단계 2 | 미진행 | UT-021-01 | 미진행 | TC-API-001, TC-API-002 | 미진행 | UC-01, UC-02 | 미진행 | Phase 2 | 미진행 |
+| REQ-040 | P0 | 단계 2 | 미진행 | UT-040-01, UT-040-02 | 미진행 | TC-SEC-003, TC-SEC-002 | 미진행 | UC-09, UC-08 | 미진행 | Phase 2, Phase 4 | 미진행 |
+| REQ-050 | P0 | 단계 6 | 미진행 | TC-CI-001 | 미진행 | TC-CI-001 | 미진행 | UC-12 | 미진행 | Phase 5 | 미진행 |
+| REQ-051 | P0 | 단계 6 | 미진행 | UT-120-01, UT-120-03, UT-120-02 | 미진행 | TC-UPDATE-002, TC-UPDATE-003, TC-UPDATE-005 | 미진행 | UC-04, UC-05 | 미진행 | Phase 3, Phase 4 | 미진행 |
+| REQ-060 | P1 | 단계 5 | 미진행 | TC-DOC-001 | 미진행 | TC-DOC-001 | 미진행 | UC-12 | 미진행 | Phase 5 | 미진행 |
 
 ## 2) 사용 방법
-- 구현/배포 단계에서 요구사항이 완료되면 대응 행(Row)에서 해당 UT/TC/UC 모두 `[완료]`로 마크.
-- 하나라도 빈칸이면 릴리즈 게이트 전까지 보강 테스트 생성이 필수.
+상태값은 다음 6종으로 통일한다.
+- `미진행`: 구현/정의되지 않음
+- `준비중`: 작성되었으나 실행 전
+- `진행`: 테스트/리뷰 중
+- `블로킹`: 외부 의존성 또는 선행요건 미충족
+- `검증중`: 실행 중이며 결과 집계 대기
+- `완료`: 요구사항과 모든 링크 타입 상태가 완료
+
+규칙:
+- 한 REQ를 완료 처리하려면 해당 행의 `UT 상태`, `TC 상태`, `UC 상태`, `UX 상태`가 모두 `완료`여야 하며, `Req 상태`도 `완료`로 바꾼다.
+- 한 항목에서 `블로킹`이 1건이라도 있으면 해당 REQ는 다음 단계로 전이되지 않는다.
+
+### 2-1) 상태 갱신 예시(1회)
+- `REQ-100`에서 `UT-100-01` 통과 시:
+  - `UT-100-01`를 `완료`로 업데이트(행 단위 누적 반영)
+  - `REQ-100`의 나머지 UT/TC/UC/UX 상태를 동시에 재평가
+- `REQ-100`의 `UT 상태`가 `완료`, `TC 상태`가 `완료`, `UC 상태`가 `완료`, `UX 상태`가 `완료`이면:
+  - `REQ-100`을 `완료`로 변경
+  - 큐에서 `REQ-101`을 `Active`로 전환
+- 블로킹 처리(예: 설치 패키지 시그니처 실패):
+  - 해당 항목의 상태를 `블로킹`으로 변경
+  - 릴리즈 게이트에서 보류 처리
 
 ## 3) 요구사항 커버리지(요약)
 - 현재 표기 기준 커버된 Req: 18개
 - 미보완 항목은 `IMPLEMENTATION_PLAN`의 4-1 산출물 검증 항목에 자동 반영.
-
