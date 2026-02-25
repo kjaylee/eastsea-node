@@ -156,7 +156,7 @@ pub const QuicConnection = struct {
     id: [32]u8,
     connected: bool,
     last_activity: i64,
-    streams: std.ArrayList(QuicStream),
+    streams: std.array_list.Managed(QuicStream),
     allocator: std.mem.Allocator,
 
     pub fn init(allocator: std.mem.Allocator, stream: net.Stream, address: net.Address) QuicConnection {
@@ -176,7 +176,7 @@ pub const QuicConnection = struct {
             .id = id,
             .connected = true,
             .last_activity = std.time.timestamp(),
-            .streams = std.ArrayList(QuicStream).init(allocator),
+            .streams = std.array_list.Managed(QuicStream).init(allocator),
             .allocator = allocator,
         };
     }
@@ -249,7 +249,7 @@ pub const QuicNode = struct {
     allocator: std.mem.Allocator,
     address: net.Address,
     server: ?net.Server,
-    connections: std.ArrayList(*QuicConnection),
+    connections: std.array_list.Managed(*QuicConnection),
     node_id: [32]u8,
     running: bool,
     message_handlers: std.HashMap(u8, *const fn(*QuicNode, *QuicConnection, *const QuicMessage) anyerror!void, std.hash_map.AutoContext(u8), 80),
@@ -266,7 +266,7 @@ pub const QuicNode = struct {
             .allocator = allocator,
             .address = address,
             .server = null,
-            .connections = std.ArrayList(*QuicConnection).init(allocator),
+            .connections = std.array_list.Managed(*QuicConnection).init(allocator),
             .node_id = node_id,
             .running = false,
             .message_handlers = std.HashMap(u8, *const fn(*QuicNode, *QuicConnection, *const QuicMessage) anyerror!void, std.hash_map.AutoContext(u8), 80).init(allocator),
@@ -301,8 +301,8 @@ pub const QuicNode = struct {
         };
         self.running = true;
         
-        std.debug.print("🌐 QUIC Node started on {}\n", .{self.address});
-        std.debug.print("🆔 Node ID: {}\n", .{std.fmt.fmtSliceHexLower(&self.node_id)});
+        std.debug.print("🌐 QUIC Node started on {f}\n", .{self.address});
+        std.debug.print("🆔 Node ID: {s}\n", .{std.fmt.bytesToHex(&self.node_id, .lower)});
     }
     
     fn findAndBindAvailablePort(self: *QuicNode) !void {
@@ -339,19 +339,19 @@ pub const QuicNode = struct {
     pub fn connectToPeer(self: *QuicNode, peer_address: net.Address) !*QuicConnection {
         const stream = net.tcpConnectToAddress(peer_address) catch |err| switch (err) {
             error.ConnectionRefused => {
-                std.debug.print("⚠️  Could not connect to peer {}: Connection refused\n", .{peer_address});
+                std.debug.print("⚠️  Could not connect to peer {f}: Connection refused\n", .{peer_address});
                 return error.PeerNotFound;
             },
             error.NetworkUnreachable => {
-                std.debug.print("⚠️  Could not connect to peer {}: Network unreachable\n", .{peer_address});
+                std.debug.print("⚠️  Could not connect to peer {f}: Network unreachable\n", .{peer_address});
                 return error.NetworkError;
             },
             error.ConnectionTimedOut => {
-                std.debug.print("⚠️  Could not connect to peer {}: Connection timed out\n", .{peer_address});
+                std.debug.print("⚠️  Could not connect to peer {f}: Connection timed out\n", .{peer_address});
                 return error.ConnectionTimedOut;
             },
             else => {
-                std.debug.print("⚠️  Could not connect to peer {}: {}\n", .{ peer_address, err });
+                std.debug.print("⚠️  Could not connect to peer {f}: {}\n", .{ peer_address, err });
                 return err;
             },
         };
@@ -361,7 +361,7 @@ pub const QuicNode = struct {
         
         try self.connections.append(connection);
         
-        std.debug.print("🤝 Connected to peer: {}\n", .{peer_address});
+        std.debug.print("🤝 Connected to peer: {f}\n", .{peer_address});
         
         return connection;
     }
@@ -382,7 +382,7 @@ pub const QuicNode = struct {
                 try self.handleConnection(quic_connection);
             } else |err| {
                 if (err == error.WouldBlock) {
-                    std.time.sleep(1000000); // 1ms
+                    std.Thread.sleep(1000000); // 1ms
                     continue;
                 }
                 return err;
@@ -398,7 +398,7 @@ pub const QuicNode = struct {
                 try self.processMessage(connection, &mut_message);
             } else |err| {
                 if (err == error.WouldBlock) {
-                    std.time.sleep(1000000); // 1ms
+                    std.Thread.sleep(1000000); // 1ms
                     continue;
                 }
                 std.debug.print("❌ Error receiving message from connection: {}\n", .{err});
@@ -677,7 +677,7 @@ test "QUIC message serialization" {
     var buffer: [1024]u8 = undefined;
     const size = try original_msg.serialize(&buffer);
     
-    const deserialized_msg = try QuicMessage.deserialize(allocator, buffer[0..size]);
+    var deserialized_msg = try QuicMessage.deserialize(allocator, buffer[0..size]);
     defer deserialized_msg.deinit();
     
     try testing.expect(deserialized_msg.header.msg_type == 0);

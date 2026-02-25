@@ -110,7 +110,7 @@ pub fn main() !void {
         }
 
         // 1초 대기
-        std.time.sleep(1 * std.time.ns_per_s);
+        std.Thread.sleep(1 * std.time.ns_per_s);
     }
 
     print("\n🛑 Shutting down Auto Discovery system...\n", .{});
@@ -132,7 +132,7 @@ fn runTestScenarios(auto_discovery: *AutoDiscovery) !void {
     try auto_discovery.connectToPeer(local_peer);
 
     // 시나리오 2: 상태 확인
-    std.time.sleep(2 * std.time.ns_per_s);
+    std.Thread.sleep(2 * std.time.ns_per_s);
     auto_discovery.printStatus();
 
     // 시나리오 3: 여러 피어 시뮬레이션
@@ -144,11 +144,11 @@ fn runTestScenarios(auto_discovery: *AutoDiscovery) !void {
 
     for (test_peers) |peer| {
         try auto_discovery.connectToPeer(peer);
-        std.time.sleep(500 * std.time.ns_per_ms); // 0.5초 간격
+        std.Thread.sleep(500 * std.time.ns_per_ms); // 0.5초 간격
     }
 
     // 최종 상태 출력
-    std.time.sleep(3 * std.time.ns_per_s);
+    std.Thread.sleep(3 * std.time.ns_per_s);
     auto_discovery.printStatus();
 
     print("✅ Test scenarios completed\n", .{});
@@ -175,7 +175,7 @@ fn runDemoMode(auto_discovery: *AutoDiscovery) !void {
             }
         }
 
-        std.time.sleep(1 * std.time.ns_per_s);
+        std.Thread.sleep(1 * std.time.ns_per_s);
     }
 
     print("🎮 Demo mode completed\n", .{});

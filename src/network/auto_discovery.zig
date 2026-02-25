@@ -296,7 +296,7 @@ pub const AutoDiscovery = struct {
             };
             
             // 발견 간격만큼 대기
-            std.time.sleep(self.discovery_interval_ms * std.time.ns_per_ms);
+            std.Thread.sleep(self.discovery_interval_ms * std.time.ns_per_ms);
         }
         
         print("🔍 Discovery loop stopped\n", .{});
@@ -312,7 +312,7 @@ pub const AutoDiscovery = struct {
             };
             
             // 1초마다 연결 상태 확인
-            std.time.sleep(1000 * std.time.ns_per_ms);
+            std.Thread.sleep(1000 * std.time.ns_per_ms);
         }
         
         print("🔗 Connection loop stopped\n", .{});
@@ -328,7 +328,7 @@ pub const AutoDiscovery = struct {
             // DHT에서 가까운 노드들을 찾아서 추가
             const closest_nodes = dht_node.routing_table.findClosestNodes(dht_node.local_node.id, 10) catch blk: {
                 // 에러 발생 시 빈 리스트 생성
-                break :blk std.ArrayList(dht.DHTNode).init(self.allocator);
+                break :blk std.array_list.Managed(dht.DHTNode).init(self.allocator);
             };
             defer closest_nodes.deinit();
             

@@ -67,7 +67,7 @@ pub const ExecutionResult = struct {
     success: bool,
     gas_used: u64,
     return_value: i64,
-    logs: std.ArrayList(LogEntry),
+    logs: std.array_list.Managed(LogEntry),
 
     pub fn deinit(self: *ExecutionResult) void {
         for (self.logs.items) |*entry| {
@@ -140,7 +140,7 @@ pub const VM = struct {
 
     /// 바이트코드 실행
     pub fn execute(self: *VM, bytecode: []const u8) !ExecutionResult {
-        var logs = std.ArrayList(LogEntry).init(self.allocator);
+        var logs = std.array_list.Managed(LogEntry).init(self.allocator);
         errdefer logs.deinit();
 
         while (self.pc < bytecode.len) {
@@ -332,10 +332,10 @@ pub const VM = struct {
 // 바이트코드 어셈블러 (편의 함수)
 // ============================================================
 pub const Assembler = struct {
-    code: std.ArrayList(u8),
+    code: std.array_list.Managed(u8),
 
     pub fn init(allocator: std.mem.Allocator) Assembler {
-        return .{ .code = std.ArrayList(u8).init(allocator) };
+        return .{ .code = std.array_list.Managed(u8).init(allocator) };
     }
 
     pub fn deinit(self: *Assembler) void {

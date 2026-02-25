@@ -21,6 +21,7 @@
             --text-muted: #64748b;
             --border: #1e293b;
             --radius: 12px;
+            --easing: cubic-bezier(0.16, 1, 0.3, 1);
         }
 
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -112,12 +113,47 @@
             width: 8px; height: 8px;
             border-radius: 50%;
             background: var(--success);
-            animation: pulse 2s ease infinite;
+            animation: pulse 2.4s var(--easing) infinite;
         }
 
         @keyframes pulse {
             0%, 100% { box-shadow: 0 0 0 0 rgba(16,185,129,0.4); }
             50% { box-shadow: 0 0 0 6px rgba(16,185,129,0); }
+        }
+
+        .refresh-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 11px;
+            padding: 3px 8px;
+            border-radius: 999px;
+            background: rgba(16,185,129,0.12);
+            color: var(--success);
+            font-weight: 600;
+            border: 1px solid rgba(16,185,129,0.2);
+            transition: all 0.25s var(--easing);
+        }
+
+        .refresh-chip .refresh-indicator {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            border: 2px solid rgba(16,185,129,0.28);
+            border-top-color: transparent;
+            display: inline-block;
+            animation: spin 0.75s linear infinite;
+            opacity: 0;
+        }
+
+        .refresh-chip.syncing {
+            background: rgba(59,130,246,0.14);
+            color: #93c5fd;
+            border-color: rgba(59,130,246,0.3);
+        }
+
+        .refresh-chip.syncing .refresh-indicator {
+            opacity: 1;
         }
 
         /* Main Layout */
@@ -140,7 +176,7 @@
             border: 1px solid var(--border);
             border-radius: var(--radius);
             padding: 20px;
-            transition: all 0.3s ease;
+            transition: transform 0.32s var(--easing), box-shadow 0.32s var(--easing), background 0.32s var(--easing), border-color 0.32s var(--easing);
             position: relative;
             overflow: hidden;
         }
@@ -159,6 +195,7 @@
             background: var(--bg-card-hover);
             transform: translateY(-2px);
             box-shadow: 0 8px 25px rgba(0,0,0,0.3);
+            border-color: rgba(59,130,246,0.45);
         }
 
         .stat-card:hover::after { opacity: 1; }
@@ -229,15 +266,9 @@
             gap: 12px;
             padding: 10px 0;
             border-bottom: 1px solid rgba(30,41,59,0.5);
-            animation: fadeIn 0.5s ease;
         }
 
         .log-entry:last-child { border: none; }
-
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateX(-10px); }
-            to { opacity: 1; transform: translateX(0); }
-        }
 
         .log-icon {
             width: 28px; height: 28px;
@@ -285,6 +316,83 @@
             color: var(--text-secondary);
         }
 
+        .wallet-form {
+            display: grid;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .wallet-field {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .wallet-label {
+            font-size: 11px;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.4px;
+        }
+
+        .wallet-field input {
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            background: #0f172a;
+            color: var(--text-primary);
+            padding: 9px 10px;
+            font-size: 13px;
+            font-family: 'SF Mono', 'Fira Code', monospace;
+        }
+
+        .wallet-field input:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+
+        .wallet-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .wallet-btn {
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            background: rgba(59,130,246,0.12);
+            color: var(--text-primary);
+            padding: 8px 12px;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.15s var(--easing), border-color 0.15s var(--easing), background 0.15s var(--easing);
+        }
+
+        .wallet-btn:hover:not(:disabled) {
+            transform: translateY(-1px);
+            border-color: rgba(59,130,246,0.7);
+        }
+
+        .wallet-btn:disabled {
+            opacity: 0.45;
+            cursor: not-allowed;
+        }
+
+        .wallet-btn.danger {
+            background: rgba(239,68,68,0.12);
+            border-color: rgba(239,68,68,0.35);
+            color: #fecaca;
+        }
+
+        .wallet-status {
+            margin-top: 12px;
+            padding: 8px 10px;
+            border-radius: 8px;
+            font-size: 11px;
+            background: rgba(15,23,42,0.8);
+            color: var(--text-muted);
+            border: 1px dashed var(--border);
+        }
+
         .badge {
             font-size: 11px;
             padding: 3px 10px;
@@ -330,7 +438,7 @@
             background: linear-gradient(to top, var(--accent), rgba(59,130,246,0.3));
             border-radius: 3px 3px 0 0;
             min-height: 4px;
-            transition: height 0.6s ease;
+            transition: none;
         }
 
         /* Footer */
@@ -341,10 +449,22 @@
             font-size: 12px;
         }
 
-        @media (max-width: 768px) {
+@media (max-width: 768px) {
             .stats-row { grid-template-columns: repeat(2, 1fr); }
             .grid-2 { grid-template-columns: 1fr; }
             .main { padding: 16px; }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after {
+                animation-duration: 0.01ms !important;
+                animation-iteration-count: 1 !important;
+                transition-duration: 0.01ms !important;
+            }
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
         }
     </style>
 </head>
@@ -358,6 +478,10 @@
         <div class="status-indicator online">
             <div class="status-dot"></div>
             <span id="statusText">Running</span>
+            <span class="refresh-chip" id="refreshBadge">
+                <span class="refresh-indicator"></span>
+                synced
+            </span>
         </div>
     </header>
 
@@ -403,6 +527,38 @@
 
             <!-- Right Column -->
             <div style="display:flex;flex-direction:column;gap:16px">
+                <!-- Wallet -->
+                <div class="panel">
+                    <div class="panel-header">
+                        <span class="panel-title">💎 Wallet</span>
+                        <span id="walletState" style="font-size:11px;color:var(--text-muted)">Disconnected</span>
+                    </div>
+                    <div class="panel-body">
+                        <div class="wallet-field">
+                            <span class="wallet-label">Connected Address</span>
+                            <div class="wallet-field input" id="walletAddress" style="font-size:12px;word-break:break-all;color:var(--text-secondary)">Not connected</div>
+                        </div>
+                        <div class="wallet-actions" style="margin-top:12px">
+                            <button class="wallet-btn" id="connectWalletBtn" type="button">Connect Phantom</button>
+                            <button class="wallet-btn danger" id="disconnectWalletBtn" type="button" disabled>Disconnect</button>
+                        </div>
+
+                        <div class="wallet-form">
+                            <div class="wallet-field">
+                                <span class="wallet-label">To Address</span>
+                                <input id="walletToInput" type="text" placeholder="Recipient address" autocomplete="off" />
+                            </div>
+                            <div class="wallet-field">
+                                <span class="wallet-label">Amount</span>
+                                <input id="walletAmountInput" type="number" min="1" step="1" placeholder="10" />
+                            </div>
+                            <button class="wallet-btn" id="sendWalletTxBtn" type="button" disabled>Sign & Send Transaction</button>
+                        </div>
+
+                        <div class="wallet-status" id="walletStatus">Connect Phantom to enable transaction signing.</div>
+                    </div>
+                </div>
+
                 <!-- Security -->
                 <div class="panel">
                     <div class="panel-header">
@@ -456,148 +612,448 @@
     </footer>
 
     <script>
-        // Simulated node state
+        const POLL_INTERVAL_MS = 2000;
+        let rpcRequestId = 1;
+
         const state = {
-            blockHeight: 1,
-            peers: [],
+            blockHeight: 0,
+            peers: 0,
+            renderedPeers: 0,
             txCount: 0,
+            walletConnected: false,
+            walletNonce: 0,
+            walletAddress: '',
             startTime: Date.now(),
+            lastPollTime: Date.now(),
+            lastBlockHeight: null,
+            lastBlockAt: Date.now(),
             events: [],
             blockTimes: [],
         };
 
-        const peerPool = [
-            '127.0.0.1:8002', '127.0.0.1:8003', '192.168.1.10:8000',
-            '10.0.0.5:8000', '172.16.0.2:8000', '192.168.0.100:8000',
-        ];
+        let phantomProvider = null;
 
         function formatUptime(ms) {
             const s = Math.floor(ms / 1000);
             if (s < 60) return s + 's';
-            if (s < 3600) return Math.floor(s/60) + 'm ' + (s%60) + 's';
-            return Math.floor(s/3600) + 'h ' + Math.floor((s%3600)/60) + 'm';
+            if (s < 3600) return Math.floor(s / 60) + 'm ' + (s % 60) + 's';
+            return Math.floor(s / 3600) + 'h ' + Math.floor((s % 3600) / 60) + 'm';
+        }
+
+        function parseNodeInfo(value) {
+            if (typeof value === 'string') {
+                const trimmed = value.trim();
+                if (trimmed.startsWith('{') && trimmed.endsWith('}')) {
+                    try {
+                        return JSON.parse(trimmed);
+                    } catch (_) {}
+                }
+            }
+            return value || {};
+        }
+
+        function parseIntValue(value, fallback) {
+            const parsed = Number(value);
+            if (Number.isFinite(parsed)) return parsed;
+            return fallback;
+        }
+
+        function isSolanaAddress(value) {
+            if (typeof value !== 'string') {
+                return false;
+            }
+            const trimmed = value.trim();
+            return /^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(trimmed);
+        }
+
+        function setWalletState(isConnected, message = '') {
+            state.walletConnected = isConnected;
+
+            const statusBadge = document.getElementById('walletState');
+            const statusNode = document.getElementById('walletStatus');
+            const connectBtn = document.getElementById('connectWalletBtn');
+            const disconnectBtn = document.getElementById('disconnectWalletBtn');
+            const sendBtn = document.getElementById('sendWalletTxBtn');
+            const addressNode = document.getElementById('walletAddress');
+
+            statusBadge.textContent = isConnected ? 'Connected' : 'Disconnected';
+            connectBtn.disabled = isConnected;
+            disconnectBtn.disabled = !isConnected;
+            sendBtn.disabled = !isConnected;
+            addressNode.textContent = isConnected && state.walletAddress ? state.walletAddress : 'Not connected';
+
+            if (message) {
+                statusNode.textContent = message;
+            } else if (isConnected) {
+                statusNode.textContent = `Connected: ${state.walletAddress ? state.walletAddress.slice(0, 8) : ''}...`;
+            } else {
+                statusNode.textContent = 'Connect Phantom to enable transaction signing.';
+            }
+        }
+
+        function getPhantomProvider() {
+            if (window.phantom && window.phantom.solana && window.phantom.solana.isPhantom) {
+                return window.phantom.solana;
+            }
+            if (window.solana && window.solana.isPhantom) {
+                return window.solana;
+            }
+            return null;
+        }
+
+        function bytesToHex(bytes) {
+            let out = '';
+            for (let i = 0; i < bytes.length; i += 1) {
+                out += bytes[i].toString(16).padStart(2, '0');
+            }
+            return out;
+        }
+
+        function base64ToBytes(base64) {
+            const binary = atob(base64);
+            const bytes = new Uint8Array(binary.length);
+            for (let i = 0; i < binary.length; i += 1) {
+                bytes[i] = binary.charCodeAt(i);
+            }
+            return bytes;
+        }
+
+        function normalizeSignatureBytes(signature) {
+            if (typeof signature === 'string') {
+                return base64ToBytes(signature);
+            }
+            if (signature instanceof ArrayBuffer) {
+                return new Uint8Array(signature);
+            }
+            if (ArrayBuffer.isView(signature)) {
+                return new Uint8Array(signature.buffer, signature.byteOffset, signature.byteLength);
+            }
+            return null;
+        }
+
+        async function connectWallet() {
+            const provider = getPhantomProvider();
+                if (!provider) {
+                    setWalletState(false, 'Phantom wallet not detected. Open this page in a browser with Phantom extension.');
+                    return;
+                }
+
+            try {
+                const response = await provider.connect();
+                const publicKey = response.publicKey || provider.publicKey;
+                if (!publicKey) {
+                    throw new Error('Wallet connection response did not include a public key.');
+                }
+
+                phantomProvider = provider;
+                state.walletAddress = publicKey.toString();
+                if (!isSolanaAddress(state.walletAddress)) {
+                    setWalletState(false, 'Connected wallet is not a valid Solana address format.');
+                    return;
+                }
+                setWalletState(true, `Connected to Phantom (${state.walletAddress.slice(0, 6)}...${state.walletAddress.slice(-4)})`);
+                addEvent('🔐', 'sec', '<strong>Wallet connected</strong>');
+            } catch (error) {
+                setWalletState(false, `Connection failed: ${error.message || 'unknown error'}`);
+            }
+        }
+
+        async function disconnectWallet() {
+            if (!phantomProvider) {
+                setWalletState(false, 'Wallet already disconnected');
+                return;
+            }
+            try {
+                if (typeof phantomProvider.disconnect === 'function') {
+                    await phantomProvider.disconnect();
+                }
+            } catch (_) {}
+
+            phantomProvider = null;
+            state.walletAddress = '';
+            state.walletNonce = 0;
+            setWalletState(false, 'Disconnected');
+            addEvent('🔒', 'sec', '<strong>Wallet disconnected</strong>');
+        }
+
+        async function sendWalletTransaction() {
+            if (!state.walletConnected || !state.walletAddress || !phantomProvider) {
+                setWalletState(false, 'Wallet not connected');
+                return;
+            }
+
+            const toAddress = document.getElementById('walletToInput').value.trim();
+            const amountRaw = Number(document.getElementById('walletAmountInput').value);
+            if (!toAddress) {
+                setWalletState(true, 'Please enter a recipient address');
+                return;
+            }
+            if (!isSolanaAddress(toAddress)) {
+                setWalletState(true, 'Invalid recipient address format');
+                return;
+            }
+            if (!Number.isFinite(amountRaw) || amountRaw <= 0) {
+                setWalletState(true, 'Amount must be a positive number');
+                return;
+            }
+
+            const amount = Math.trunc(amountRaw);
+            const timestamp = Math.floor(Date.now() / 1000);
+            const nonce = state.walletNonce;
+            const messageText = `eastsea:tx:${state.walletAddress}:${toAddress}:${amount}:${timestamp}:${nonce}`;
+            const message = new TextEncoder().encode(messageText);
+
+            try {
+                const signatureResult = await phantomProvider.signMessage(message, 'utf8');
+                const signatureBytes = normalizeSignatureBytes(signatureResult && signatureResult.signature ? signatureResult.signature : signatureResult);
+                if (!signatureBytes) {
+                    throw new Error('No signature returned from wallet');
+                }
+
+                const signatureHex = bytesToHex(signatureBytes);
+                const txResult = await rpcCall('sendTransaction', {
+                    from: state.walletAddress,
+                    to: toAddress,
+                    amount,
+                    timestamp,
+                    nonce,
+                    public_key: state.walletAddress,
+                    signature: signatureHex,
+                    message: messageText,
+                });
+
+                const txHash = typeof txResult === 'string' ? txResult : JSON.stringify(txResult);
+                addEvent('✅', 'tx', `<strong>Transaction submitted</strong> — ${txHash}`);
+                setWalletState(true, `Submitted tx: ${txHash.slice(0, 10)}...`);
+                state.walletNonce += 1;
+                state.txCount += 1;
+                updateStats(false);
+            } catch (error) {
+                setWalletState(true, `Send failed: ${error.message || 'unknown error'}`);
+            }
+        }
+
+        async function rpcCall(method, params = null) {
+            const request = {
+                jsonrpc: '2.0',
+                method,
+                params,
+                id: rpcRequestId++,
+            };
+
+            const response = await fetch('/', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(request),
+            });
+
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}`);
+            }
+
+            const payload = await response.json();
+            if (payload.error) {
+                throw new Error(payload.error.message || 'RPC error');
+            }
+            return payload.result;
         }
 
         function addEvent(icon, iconClass, text) {
-            const now = new Date().toLocaleTimeString();
-            state.events.unshift({ icon, iconClass, text, time: now });
+            const event = {
+                icon,
+                iconClass,
+                text,
+                time: new Date().toLocaleTimeString(),
+            };
+
+            state.events.unshift(event);
             if (state.events.length > 50) state.events.pop();
-            renderLog();
+
+            const el = document.getElementById('activityLog');
+            const row = document.createElement('div');
+            row.className = 'log-entry';
+            row.innerHTML = `
+                <div class="log-icon ${event.iconClass}">${event.icon}</div>
+                <div>
+                    <div class="log-text">${event.text}</div>
+                    <div class="log-time">${event.time}</div>
+                </div>
+            `;
+            el.prepend(row);
+
+            while (el.children.length > 50) {
+                el.removeChild(el.lastElementChild);
+            }
+
+            updateLogCount();
         }
 
-        function renderLog() {
-            const el = document.getElementById('activityLog');
-            el.innerHTML = state.events.map(e => `
-                <div class="log-entry">
-                    <div class="log-icon ${e.iconClass}">${e.icon}</div>
-                    <div>
-                        <div class="log-text">${e.text}</div>
-                        <div class="log-time">${e.time}</div>
-                    </div>
-                </div>
-            `).join('');
+        function createPeerRow(index) {
+            const row = document.createElement('div');
+            row.className = 'peer-item';
+
+            const dot = document.createElement('div');
+            dot.className = 'peer-dot active';
+            row.appendChild(dot);
+
+            const addr = document.createElement('span');
+            addr.className = 'peer-addr';
+            addr.textContent = `peer-${index + 1}`;
+            row.appendChild(addr);
+
+            return row;
+        }
+
+        function updateLogCount() {
             document.getElementById('logCount').textContent = state.events.length + ' events';
         }
 
         function renderPeers() {
             const el = document.getElementById('peerList');
-            if (state.peers.length === 0) {
+            if (state.peers <= 0) {
                 el.innerHTML = '<div style="font-size:13px;color:var(--text-muted);padding:8px 0">Discovering peers...</div>';
+                state.renderedPeers = 0;
                 return;
             }
-            el.innerHTML = state.peers.map(p => `
-                <div class="peer-item">
-                    <div class="peer-dot active"></div>
-                    <span class="peer-addr">${p}</span>
-                </div>
-            `).join('');
+
+            if (state.renderedPeers === 0 && el.firstElementChild) {
+                el.innerHTML = '';
+            }
+
+            if (state.peers === state.renderedPeers) {
+                return;
+            }
+
+            if (state.peers > state.renderedPeers) {
+                for (let i = state.renderedPeers; i < state.peers; i += 1) {
+                    el.appendChild(createPeerRow(i));
+                }
+            } else {
+                for (let i = state.renderedPeers - 1; i >= state.peers; i -= 1) {
+                    if (el.lastElementChild) {
+                        el.removeChild(el.lastElementChild);
+                    }
+                }
+            }
+
+            state.renderedPeers = state.peers;
         }
 
         function renderChart() {
             const el = document.getElementById('blockChart');
             const times = state.blockTimes.slice(-30);
-            if (times.length < 2) {
+            if (times.length < 1) {
                 el.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;width:100%;height:100%;color:var(--text-muted);font-size:13px">Waiting for blocks...</div>';
                 return;
             }
+
             const maxTime = Math.max(...times, 1);
-            el.innerHTML = times.map(t => {
+            el.innerHTML = times.map((t) => {
                 const h = Math.max(4, (t / maxTime) * 140);
                 return `<div class="chart-bar" style="height:${h}px"></div>`;
             }).join('');
         }
 
-        function updateStats() {
+        function updateStats(hasNewBlocks) {
             const up = Date.now() - state.startTime;
             document.getElementById('blockHeight').textContent = state.blockHeight.toLocaleString();
-            document.getElementById('peerCount').textContent = state.peers.length;
+            document.getElementById('peerCount').textContent = state.peers.toLocaleString();
             document.getElementById('txCount').textContent = state.txCount.toLocaleString();
             document.getElementById('uptime').textContent = formatUptime(up);
-            document.getElementById('blockSub').textContent = state.blockHeight === 1 ? 'Genesis only' : `+${state.blockHeight - 1} mined`;
-            document.getElementById('peerSub').textContent = state.peers.length === 0 ? 'Discovering...' : `${state.peers.length} connected`;
+            document.getElementById('blockSub').textContent = `${state.blockHeight} synced`;
+            document.getElementById('peerSub').textContent = `${state.peers} connected`;
             document.getElementById('uptimeSub').textContent = up < 60000 ? 'Just started' : 'Stable';
+            flashSyncState();
+            renderPeers();
+            if (hasNewBlocks) {
+                renderChart();
+            }
         }
 
-        // Simulate node behavior
-        // Phase 1: Boot sequence
-        setTimeout(() => addEvent('📋', 'sec', '<strong>Onboarding</strong> — Config loaded: node_port=8001, rpc_port=8545'), 500);
-        setTimeout(() => addEvent('🔍', 'net', '<strong>Boot Diagnostic</strong> — Port scan passed, privileges OK'), 1200);
-        setTimeout(() => addEvent('📦', 'block', '<strong>Storage</strong> — Schema v1 initialized, data path verified'), 1800);
-        setTimeout(() => addEvent('🔐', 'sec', '<strong>Security</strong> — Auth token issued (scope=admin, TTL=24h)'), 2400);
-        setTimeout(() => addEvent('✅', 'block', '<strong>Node Started</strong> — Eastsea v0.1.0 running on port 8001'), 3000);
+        function flashSyncState() {
+            const chip = document.getElementById('refreshBadge');
+            if (!chip) return;
+            chip.classList.add('syncing');
+            clearTimeout(window.__refreshTimeout);
+            window.__refreshTimeout = setTimeout(() => chip.classList.remove('syncing'), 280);
+        }
 
-        // Phase 2: Peer discovery
-        setTimeout(() => {
-            const p = peerPool[0];
-            state.peers.push(p);
-            addEvent('🤝', 'net', `<strong>Peer Connected</strong> — ${p}`);
-            renderPeers();
-        }, 4000);
+        async function refreshFromNode() {
+            const statusText = document.getElementById('statusText');
+            const refreshBadge = document.getElementById('refreshBadge');
+            let hasNewBlocks = false;
 
-        setTimeout(() => {
-            const p = peerPool[1];
-            state.peers.push(p);
-            addEvent('🤝', 'net', `<strong>Peer Connected</strong> — ${p}`);
-            renderPeers();
-        }, 5500);
+            try {
+                const [blockHeightResult, nodeInfoResult] = await Promise.all([
+                    rpcCall('getBlockHeight', null),
+                    rpcCall('getNodeInfo', null),
+                ]);
 
-        // Phase 3: Continuous operation
-        let mineInterval;
-        setTimeout(() => {
-            mineInterval = setInterval(() => {
-                state.blockHeight++;
-                const txInBlock = Math.floor(Math.random() * 5) + 1;
-                state.txCount += txInBlock;
-                const blockTime = 300 + Math.random() * 200;
-                state.blockTimes.push(blockTime);
+                const nodeInfo = parseNodeInfo(nodeInfoResult);
+                const nextHeight = parseIntValue(blockHeightResult, state.blockHeight);
+                const nextPeers = parseIntValue(nodeInfo.peer_count, state.peers);
+                const now = Date.now();
+                const blocksCreated = state.lastBlockHeight === null ? 0 : Math.max(0, nextHeight - state.lastBlockHeight);
+                const isRunning = nodeInfo.is_running !== false;
 
-                addEvent('⛏️', 'block', `<strong>Block #${state.blockHeight}</strong> mined — ${txInBlock} tx, ${Math.round(blockTime)}ms`);
-                renderChart();
-
-                // Random peer join
-                if (Math.random() > 0.7 && state.peers.length < peerPool.length) {
-                    const available = peerPool.filter(p => !state.peers.includes(p));
-                    if (available.length > 0) {
-                        const p = available[Math.floor(Math.random() * available.length)];
-                        state.peers.push(p);
-                        addEvent('🤝', 'net', `<strong>Peer Connected</strong> — ${p}`);
-                        renderPeers();
+                if (state.lastBlockHeight === null) {
+                    addEvent('✅', 'sec', '<strong>Dashboard connected</strong> — Real node state synced');
+                } else if (blocksCreated > 0) {
+                    for (let i = 0; i < blocksCreated; i += 1) {
+                        const nextBlock = state.lastBlockHeight + 1 + i;
+                        const elapsed = now - state.lastBlockAt;
+                        state.blockTimes.push(Math.max(200, elapsed));
+                        if (state.blockTimes.length > 60) {
+                            state.blockTimes.shift();
+                        }
+                        hasNewBlocks = true;
+                        state.lastBlockAt = now;
+                        state.txCount += 1;
+                        addEvent('⛏️', 'block', `<strong>Block #${nextBlock}</strong> mined`);
                     }
                 }
 
-                // Random transaction
-                if (Math.random() > 0.5) {
-                    const amt = Math.floor(Math.random() * 500) + 10;
-                    addEvent('💸', 'tx', `<strong>Transfer</strong> — ${amt} EST sent`);
-                }
-            }, 2500);
-        }, 6000);
+                state.lastBlockHeight = nextHeight;
+                state.blockHeight = nextHeight;
+                state.peers = nextPeers;
+                state.lastPollTime = now;
 
-        // Stats updater
-        setInterval(updateStats, 500);
-        updateStats();
-        renderPeers();
-        renderChart();
+                const version = nodeInfo.version || 'v0.1.0';
+                document.querySelector('.version-badge').textContent = version;
+                statusText.textContent = isRunning ? 'Running' : 'Offline';
+                if (refreshBadge) {
+                    refreshBadge.textContent = isRunning ? 'synced' : 'offline';
+                }
+            } catch (err) {
+                console.error('Dashboard refresh failed:', err);
+                statusText.textContent = 'Sync error';
+                if (refreshBadge) {
+                    refreshBadge.textContent = 'reconnect';
+                }
+            }
+
+            updateStats(hasNewBlocks);
+        }
+
+        setInterval(refreshFromNode, POLL_INTERVAL_MS);
+        refreshFromNode();
+
+        document.getElementById('connectWalletBtn').addEventListener('click', connectWallet);
+        document.getElementById('disconnectWalletBtn').addEventListener('click', disconnectWallet);
+        document.getElementById('sendWalletTxBtn').addEventListener('click', sendWalletTransaction);
+
+        const initialProvider = getPhantomProvider();
+        if (initialProvider && initialProvider.publicKey) {
+            phantomProvider = initialProvider;
+            state.walletAddress = initialProvider.publicKey.toString();
+            if (isSolanaAddress(state.walletAddress)) {
+                setWalletState(true, `Connected to Phantom (${state.walletAddress.slice(0, 6)}...${state.walletAddress.slice(-4)})`);
+            } else {
+                setWalletState(false, 'Connected wallet is not a valid Solana address format.');
+            }
+        } else {
+            setWalletState(false, 'Ready to connect Phantom.');
+        }
     </script>
 </body>
 </html>

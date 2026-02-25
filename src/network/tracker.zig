@@ -215,7 +215,7 @@ pub const TrackerServer = struct {
             // 클라이언트 연결 수락
             const connection = self.socket.accept() catch |err| {
                 if (err == error.WouldBlock) {
-                    std.time.sleep(1000000); // 1ms 대기
+                    std.Thread.sleep(1000000); // 1ms 대기
                     continue;
                 }
                 print("❌ Accept error: {}\n", .{err});

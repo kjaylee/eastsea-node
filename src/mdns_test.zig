@@ -113,7 +113,7 @@ pub fn main() !void {
             };
         }
 
-        std.time.sleep(3_000_000_000); // 3 seconds
+        std.Thread.sleep(3_000_000_000); // 3 seconds
     }
 
     std.debug.print("\n🎯 mDNS discovery test completed!\n", .{});

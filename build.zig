@@ -1,5 +1,18 @@
 const std = @import("std");
 
+fn createAppModule(
+    b: *std.Build,
+    root_file: []const u8,
+    target: std.Build.ResolvedTarget,
+    optimize: std.builtin.OptimizeMode,
+) *std.Build.Module {
+    return b.createModule(.{
+        .root_source_file = b.path(root_file),
+        .target = target,
+        .optimize = optimize,
+    });
+}
+
 pub fn build(b: *std.Build) void {
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
@@ -7,9 +20,7 @@ pub fn build(b: *std.Build) void {
     // Main executable
     const exe = b.addExecutable(.{
         .name = "eastsea",
-        .root_source_file = b.path("src/main.zig"),
-        .target = target,
-        .optimize = optimize,
+        .root_module = createAppModule(b, "src/main.zig", target, optimize),
     });
 
     b.installArtifact(exe);
@@ -28,9 +39,7 @@ pub fn build(b: *std.Build) void {
     // Production executable
     const prod_exe = b.addExecutable(.{
         .name = "eastsea-production",
-        .root_source_file = b.path("src/main_production.zig"),
-        .target = target,
-        .optimize = optimize,
+        .root_module = createAppModule(b, "src/main_production.zig", target, optimize),
     });
 
     b.installArtifact(prod_exe);
@@ -66,9 +75,7 @@ pub fn build(b: *std.Build) void {
     inline for (test_targets) |t| {
         const test_exe = b.addExecutable(.{
             .name = t[0],
-            .root_source_file = b.path(t[1]),
-            .target = target,
-            .optimize = optimize,
+            .root_module = createAppModule(b, t[1], target, optimize),
         });
         b.installArtifact(test_exe);
 
@@ -83,9 +90,7 @@ pub fn build(b: *std.Build) void {
 
     // Unit tests (main)
     const unit_tests = b.addTest(.{
-        .root_source_file = b.path("src/main.zig"),
-        .target = target,
-        .optimize = optimize,
+        .root_module = createAppModule(b, "src/main.zig", target, optimize),
     });
     const run_unit_tests = b.addRunArtifact(unit_tests);
     const test_step = b.step("test", "Run unit tests");
@@ -112,9 +117,7 @@ pub fn build(b: *std.Build) void {
 
     inline for (module_tests) |src| {
         const mod_test = b.addTest(.{
-            .root_source_file = b.path(src),
-            .target = target,
-            .optimize = optimize,
+            .root_module = createAppModule(b, src, target, optimize),
         });
         const run_mod_test = b.addRunArtifact(mod_test);
         test_step.dependOn(&run_mod_test.step);

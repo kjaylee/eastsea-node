@@ -246,7 +246,7 @@ pub const LoadTestFramework = struct {
             }
             
             // 짧은 대기 (CPU 과부하 방지)
-            std.time.sleep(10 * std.time.ns_per_ms);
+            std.Thread.sleep(10 * std.time.ns_per_ms);
         }
         
         const actual_duration = std.time.timestamp() - start_time;

@@ -65,7 +65,7 @@ pub fn main() !void {
     // 상태 모니터링 루프
     var iteration: u32 = 0;
     while (true) {
-        std.time.sleep(5000 * std.time.ns_per_ms); // 5초마다 상태 출력
+        std.Thread.sleep(5000 * std.time.ns_per_ms); // 5초마다 상태 출력
 
         iteration += 1;
         print("📊 Status Update #{}\n", .{iteration});

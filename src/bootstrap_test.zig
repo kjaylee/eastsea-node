@@ -85,7 +85,7 @@ pub fn main() !void {
     const accept_thread = try std.Thread.spawn(.{}, acceptConnections, .{&p2p_node});
     defer {
         // Give a small delay for thread to start
-        std.time.sleep(100_000_000); // 100ms
+        std.Thread.sleep(100_000_000); // 100ms
         // Signal the P2P node to stop running
         p2p_node.stop();
         // Wait for the accept thread to finish
@@ -126,7 +126,7 @@ pub fn main() !void {
             };
         }
 
-        std.time.sleep(2_000_000_000); // 2 seconds
+        std.Thread.sleep(2_000_000_000); // 2 seconds
     }
 
     std.debug.print("\n🎯 Bootstrap test completed!\n", .{});

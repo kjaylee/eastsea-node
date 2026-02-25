@@ -193,7 +193,7 @@ pub const P2PNode = struct {
     allocator: std.mem.Allocator,
     address: net.Address,
     server: ?net.Server,
-    peers: std.ArrayList(*PeerConnection),
+    peers: std.array_list.Managed(*PeerConnection),
     node_id: [32]u8,
     running: bool,
     message_handlers: std.HashMap(u8, *const fn(*P2PNode, *PeerConnection, *const P2PMessage) anyerror!void, std.hash_map.AutoContext(u8), 80),
@@ -210,7 +210,7 @@ pub const P2PNode = struct {
             .allocator = allocator,
             .address = address,
             .server = null,
-            .peers = std.ArrayList(*PeerConnection).init(allocator),
+            .peers = std.array_list.Managed(*PeerConnection).init(allocator),
             .node_id = node_id,
             .running = false,
             .message_handlers = std.HashMap(u8, *const fn(*P2PNode, *PeerConnection, *const P2PMessage) anyerror!void, std.hash_map.AutoContext(u8), 80).init(allocator),
@@ -244,8 +244,8 @@ pub const P2PNode = struct {
         };
         self.running = true;
         
-        std.debug.print("🌐 P2P Node started on {}\n", .{self.address});
-        std.debug.print("🆔 Node ID: {}\n", .{std.fmt.fmtSliceHexLower(&self.node_id)});
+        std.debug.print("🌐 P2P Node started on {f}\n", .{self.address});
+        std.debug.print("🆔 Node ID: {s}\n", .{std.fmt.bytesToHex(&self.node_id, .lower)});
         
         // Register default message handlers
         try self.registerMessageHandler(0, handlePingMessage);
@@ -292,19 +292,19 @@ pub const P2PNode = struct {
     pub fn connectToPeer(self: *P2PNode, peer_address: net.Address) !*PeerConnection {
         const stream = net.tcpConnectToAddress(peer_address) catch |err| switch (err) {
             error.ConnectionRefused => {
-                std.debug.print("⚠️  Could not connect to peer {}: Connection refused\n", .{peer_address});
+                std.debug.print("⚠️  Could not connect to peer {f}: Connection refused\n", .{peer_address});
                 return error.PeerNotFound;
             },
             error.NetworkUnreachable => {
-                std.debug.print("⚠️  Could not connect to peer {}: Network unreachable\n", .{peer_address});
+                std.debug.print("⚠️  Could not connect to peer {f}: Network unreachable\n", .{peer_address});
                 return error.NetworkError;
             },
             error.ConnectionTimedOut => {
-                std.debug.print("⚠️  Could not connect to peer {}: Connection timed out\n", .{peer_address});
+                std.debug.print("⚠️  Could not connect to peer {f}: Connection timed out\n", .{peer_address});
                 return error.ConnectionTimedOut;
             },
             else => {
-                std.debug.print("⚠️  Could not connect to peer {}: {}\n", .{ peer_address, err });
+                std.debug.print("⚠️  Could not connect to peer {f}: {}\n", .{ peer_address, err });
                 return err;
             },
         };
@@ -314,11 +314,11 @@ pub const P2PNode = struct {
         
         try self.peers.append(peer);
         
-        std.debug.print("🤝 Connected to peer: {}\n", .{peer_address});
+        std.debug.print("🤝 Connected to peer: {f}\n", .{peer_address});
         
         // Send handshake
         self.sendHandshake(peer) catch |err| {
-            std.debug.print("⚠️  Failed to send handshake to {}: {}\n", .{ peer_address, err });
+                std.debug.print("⚠️  Failed to send handshake to {f}: {}\n", .{ peer_address, err });
             // Don't fail the connection for handshake errors
         };
         
@@ -335,7 +335,7 @@ pub const P2PNode = struct {
                 
                 try self.peers.append(peer);
                 
-                std.debug.print("📥 Accepted connection from: {}\n", .{connection.address});
+                std.debug.print("📥 Accepted connection from: {f}\n", .{connection.address});
                 
                 // Handle peer in separate thread (simplified for demo)
                 try self.handlePeer(peer);
@@ -346,7 +346,7 @@ pub const P2PNode = struct {
                 }
                 
                 if (err == error.WouldBlock) {
-                    std.time.sleep(1000000); // 1ms
+                    std.Thread.sleep(1000000); // 1ms
                     continue;
                 }
                 
@@ -379,7 +379,7 @@ pub const P2PNode = struct {
                 try self.processMessage(peer, &mut_message);
             } else |err| {
                 if (err == error.WouldBlock) {
-                    std.time.sleep(1000000); // 1ms
+                    std.Thread.sleep(1000000); // 1ms
                     continue;
                 }
                 std.debug.print("❌ Error receiving message from peer: {}\n", .{err});
@@ -415,7 +415,7 @@ pub const P2PNode = struct {
     }
 
     pub fn sendHandshake(self: *P2PNode, peer: *PeerConnection) !void {
-        const handshake_data = try std.fmt.allocPrint(self.allocator, "HANDSHAKE:{s}", .{std.fmt.fmtSliceHexLower(&self.node_id)});
+        const handshake_data = try std.fmt.allocPrint(self.allocator, "HANDSHAKE:{s}", .{std.fmt.bytesToHex(&self.node_id, .lower)});
         defer self.allocator.free(handshake_data);
         
         var handshake_msg = try P2PMessage.init(self.allocator, 5, handshake_data);
@@ -697,7 +697,7 @@ test "P2P message serialization" {
     var buffer: [1024]u8 = undefined;
     const size = try original_msg.serialize(&buffer);
     
-    const deserialized_msg = try P2PMessage.deserialize(allocator, buffer[0..size]);
+    var deserialized_msg = try P2PMessage.deserialize(allocator, buffer[0..size]);
     defer deserialized_msg.deinit();
     
     try testing.expect(deserialized_msg.header.msg_type == 0);

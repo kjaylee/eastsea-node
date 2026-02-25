@@ -1,7 +1,7 @@
 const std = @import("std");
 const net = std.net;
 const print = std.debug.print;
-const ArrayList = std.ArrayList;
+const ArrayList = std.array_list.Managed;
 const Allocator = std.mem.Allocator;
 const Thread = std.Thread;
 
@@ -110,7 +110,7 @@ pub const NetworkFailureTestFramework = struct {
                 data_loss_detected = true;
             }
             
-            std.time.sleep(1000 * std.time.ns_per_ms); // 1초 대기
+            std.Thread.sleep(1000 * std.time.ns_per_ms); // 1초 대기
         }
         
         // 4. 정상 조건 복원
@@ -133,7 +133,7 @@ pub const NetworkFailureTestFramework = struct {
                 break;
             }
             
-            std.time.sleep(1000 * std.time.ns_per_ms); // 1초 대기
+            std.Thread.sleep(1000 * std.time.ns_per_ms); // 1초 대기
         }
         
         if (!system_recovered) {
@@ -158,7 +158,7 @@ pub const NetworkFailureTestFramework = struct {
         };
         
         try self.test_results.append(result);
-        print("{}\n", .{result});
+        print("{any}\n", .{result});
     }
     
     /// 네트워크 파티션 테스트
@@ -339,19 +339,19 @@ pub const NetworkFailureTestFramework = struct {
         
         // 다양한 장애 시나리오 실행
         try self.testNetworkPartition(target_system);
-        std.time.sleep(5000 * std.time.ns_per_ms); // 5초 대기
+        std.Thread.sleep(5000 * std.time.ns_per_ms); // 5초 대기
         
         try self.testHighLatency(target_system);
-        std.time.sleep(5000 * std.time.ns_per_ms);
+        std.Thread.sleep(5000 * std.time.ns_per_ms);
         
         try self.testPacketLoss(target_system);
-        std.time.sleep(5000 * std.time.ns_per_ms);
+        std.Thread.sleep(5000 * std.time.ns_per_ms);
         
         try self.testBandwidthLimit(target_system);
-        std.time.sleep(5000 * std.time.ns_per_ms);
+        std.Thread.sleep(5000 * std.time.ns_per_ms);
         
         try self.testByzantineFault(target_system);
-        std.time.sleep(5000 * std.time.ns_per_ms);
+        std.Thread.sleep(5000 * std.time.ns_per_ms);
         
         try self.testEclipseAttack(target_system);
         
@@ -375,7 +375,7 @@ pub const NetworkFailureTestFramework = struct {
         var total_performance_impact: f64 = 0.0;
         
         for (self.test_results.items) |result| {
-            print("{}\n", .{result});
+            print("{any}\n", .{result});
             
             total_tests += 1;
             if (result.system_recovered) recovered_tests += 1;

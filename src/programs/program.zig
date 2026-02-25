@@ -4,13 +4,13 @@ const std = @import("std");
 pub const ProgramResult = struct {
     success: bool,
     error_message: ?[]const u8,
-    logs: std.ArrayList([]const u8),
+    logs: std.array_list.Managed([]const u8),
     
     pub fn init(allocator: std.mem.Allocator) ProgramResult {
         return ProgramResult{
             .success = true,
             .error_message = null,
-            .logs = std.ArrayList([]const u8).init(allocator),
+            .logs = std.array_list.Managed([]const u8).init(allocator),
         };
     }
     

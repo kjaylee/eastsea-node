@@ -105,12 +105,18 @@ pub const WebServer = struct {
         // Get actual data from the blockchain and node if available
         var peer_count: usize = 0;
         var block_height: u64 = 0;
-        var nodeId: []const u8 = "N/A";
+        var node_id: []const u8 = "N/A";
+        var should_free_node_id = false;
         
         if (self.node_ref) |node| {
             peer_count = node.getPeerCount();
-            nodeId = node.address;
+            if (node.getNodeId(self.allocator)) |id| {
+                node_id = id;
+                should_free_node_id = true;
+            } else |_| {}
         }
+
+        defer if (should_free_node_id) self.allocator.free(node_id);
         
         if (self.blockchain_ref) |chain| {
             block_height = chain.getHeight();
@@ -120,7 +126,7 @@ pub const WebServer = struct {
         // For now, we'll return mock JSON data
         const json_data = try std.fmt.allocPrint(self.allocator, 
             "{{\n  \"peerCount\": {},\n  \"blockHeight\": {},\n  \"tps\": 124.5,\n  \"nodeId\": \"{s}\",\n  \"version\": \"0.1.0\",\n  \"uptime\": \"2h 15m\"\n}}",
-            .{ peer_count, block_height, nodeId }
+            .{ peer_count, block_height, node_id }
         );
         defer self.allocator.free(json_data);
         
@@ -135,7 +141,7 @@ pub const WebServer = struct {
 
     fn serveBlocks(self: *WebServer, server: *http.Server) !void {
         // Get actual data from the blockchain if available
-        var blocks_json = std.ArrayList(u8).init(self.allocator);
+        var blocks_json = std.array_list.Managed(u8).init(self.allocator);
         defer blocks_json.deinit();
         
         try blocks_json.append('[');
@@ -172,7 +178,7 @@ pub const WebServer = struct {
 
     fn serveTransactions(self: *WebServer, server: *http.Server) !void {
         // Get actual data from the blockchain if available
-        var transactions_json = std.ArrayList(u8).init(self.allocator);
+        var transactions_json = std.array_list.Managed(u8).init(self.allocator);
         defer transactions_json.deinit();
         
         try transactions_json.append('[');

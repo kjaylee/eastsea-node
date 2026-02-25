@@ -21,7 +21,7 @@ fn runTrackerServer(allocator: std.mem.Allocator, port: u16) !void {
     // 메인 스레드에서 상태 모니터링
     var counter: u32 = 0;
     while (counter < 60) { // 60초 동안 실행
-        std.time.sleep(1000000000); // 1초 대기
+        std.Thread.sleep(1000000000); // 1초 대기
         counter += 1;
 
         if (counter % 10 == 0) {
@@ -42,7 +42,7 @@ fn runTrackerClient(allocator: std.mem.Allocator, client_port: u16, tracker_port
     const tracker_address = net.Address.parseIp4("127.0.0.1", tracker_port) catch unreachable;
 
     print("🔌 Tracker Client starting on port {d}...\n", .{client_port});
-    print("📍 Node ID: {x}\n", .{std.fmt.fmtSliceHexLower(node_id[0..8])});
+    print("📍 Node ID: {s}\n", .{std.fmt.bytesToHex(node_id[0..8], .lower)});
 
     // 1. Tracker에 자신을 등록
     print("\n📢 Step 1: Announcing to tracker...\n", .{});
@@ -61,13 +61,13 @@ fn runTrackerClient(allocator: std.mem.Allocator, client_port: u16, tracker_port
 
     print("📋 Received {d} peers:\n", .{peers.len});
     for (peers, 0..) |peer, i| {
-        print("  {d}. {}:{d} (ID: {x})\n", .{ i + 1, peer.address, peer.port, std.fmt.fmtSliceHexLower(peer.node_id[0..8]) });
+        print("  {d}. {}:{d} (ID: {s})\n", .{ i + 1, peer.address, peer.port, std.fmt.bytesToHex(peer.node_id[0..8], .lower) });
     }
 
     // 3. 주기적으로 하트비트 전송
     print("\n💓 Step 3: Sending heartbeats...\n", .{});
     for (0..5) |i| {
-        std.time.sleep(2000000000); // 2초 대기
+        std.Thread.sleep(2000000000); // 2초 대기
 
         client.sendHeartbeat(tracker_address) catch |err| {
             print("❌ Heartbeat {d} failed: {}\n", .{ i + 1, err });
@@ -119,7 +119,7 @@ fn runIntegratedTest(allocator: std.mem.Allocator) !void {
     }
 
     // 서버 시작 대기
-    std.time.sleep(1000000000); // 1초 대기
+    std.Thread.sleep(1000000000); // 1초 대기
 
     // 2. 단일 클라이언트 테스트
     print("\n🔧 Phase 1: Single Client Test\n", .{});

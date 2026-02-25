@@ -96,7 +96,7 @@ pub const Attestation = struct {
     /// Calculate the hash of the attestation
     pub fn calculateHash(self: *const Attestation) [32]u8 {
         // Create a buffer with all attestation data except signature
-        var buffer = std.ArrayList(u8).init(self.allocator);
+        var buffer = std.array_list.Managed(u8).init(self.allocator);
         defer buffer.deinit();
         
         // Add all fields except signature to the buffer
@@ -550,8 +550,8 @@ pub const AttestationService = struct {
         attester.incrementAttestationCount();
         attester.increaseReputation(1);
         
-        std.debug.print("✅ Created attestation ID: {}\n", .{
-            std.fmt.fmtSliceHexLower(&attestation.id),
+        std.debug.print("✅ Created attestation ID: {s}\n", .{
+            std.fmt.bytesToHex(&attestation.id, .lower),
         });
         
         // Return pointer to stored attestation
@@ -585,8 +585,8 @@ pub const AttestationService = struct {
         // Store the private attestation
         try self.attestations.put(private_attestation.id, private_attestation);
         
-        std.debug.print("✅ Created private attestation ID: {}\n", .{
-            std.fmt.fmtSliceHexLower(&private_attestation.id),
+        std.debug.print("✅ Created private attestation ID: {s}\n", .{
+            std.fmt.bytesToHex(&private_attestation.id, .lower),
         });
         
         // Return pointer to stored attestation
@@ -606,8 +606,8 @@ pub const AttestationService = struct {
         };
         
         attestation.revocation_time = @as(u64, @intCast(std.time.timestamp()));
-        std.debug.print("✅ Revoked attestation ID: {}\n", .{
-            std.fmt.fmtSliceHexLower(&attestation_id),
+        std.debug.print("✅ Revoked attestation ID: {s}\n", .{
+            std.fmt.bytesToHex(&attestation_id, .lower),
         });
     }
     
@@ -622,8 +622,8 @@ pub const AttestationService = struct {
     }
     
     /// Get all attestations for a recipient
-    pub fn getAttestationsForRecipient(self: *AttestationService, recipient: [20]u8) !std.ArrayList(*Attestation) {
-        var result = std.ArrayList(*Attestation).init(self.allocator);
+    pub fn getAttestationsForRecipient(self: *AttestationService, recipient: [20]u8) !std.array_list.Managed(*Attestation) {
+        var result = std.array_list.Managed(*Attestation).init(self.allocator);
         
         var it = self.attestations.iterator();
         while (it.next()) |entry| {
@@ -637,8 +637,8 @@ pub const AttestationService = struct {
     }
     
     /// Get all attestations by an attester
-    pub fn getAttestationsByAttester(self: *AttestationService, attester_id: [20]u8) !std.ArrayList(*Attestation) {
-        var result = std.ArrayList(*Attestation).init(self.allocator);
+    pub fn getAttestationsByAttester(self: *AttestationService, attester_id: [20]u8) !std.array_list.Managed(*Attestation) {
+        var result = std.array_list.Managed(*Attestation).init(self.allocator);
         
         var it = self.attestations.iterator();
         while (it.next()) |entry| {

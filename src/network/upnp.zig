@@ -459,7 +459,7 @@ pub const UPnPClient = struct {
         // 실제 HTTP SOAP 요청 구현 필요
         // 현재는 시뮬레이션으로 성공 반환
         print("📤 Sending SOAP request: {s}\n", .{action});
-        std.time.sleep(100 * std.time.ns_per_ms); // 100ms 지연
+        std.Thread.sleep(100 * std.time.ns_per_ms); // 100ms 지연
         return true;
     }
 
@@ -470,7 +470,7 @@ pub const UPnPClient = struct {
         // 실제 HTTP SOAP 요청 구현 필요
         // 현재는 시뮬레이션 응답 반환
         print("📤 Sending SOAP request: {s}\n", .{action});
-        std.time.sleep(100 * std.time.ns_per_ms); // 100ms 지연
+        std.Thread.sleep(100 * std.time.ns_per_ms); // 100ms 지연
         
         // 가짜 외부 IP 응답
         const fake_response = 

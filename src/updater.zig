@@ -1,7 +1,6 @@
 const std = @import("std");
-const fs = std.fs;
 
-/// REQ-102: 자동 업데이트/제거 지원
+/// REQ-102: 자동 업데이트/롤백 지원
 /// UT-102-01: updater.checkVersion — 버전 비교
 /// UT-102-02: updater.prepareRollback — 롤백 준비
 pub const Version = struct {
@@ -30,6 +29,12 @@ pub const Version = struct {
 
 pub const CURRENT_VERSION = Version{ .major = 0, .minor = 1, .patch = 0 };
 
+pub const CURRENT_VERSION_TEXT = "0.1.0";
+
+pub fn toString(allocator: std.mem.Allocator, version: Version) ![]u8 {
+    return std.fmt.allocPrint(allocator, "{d}.{d}.{d}", .{ version.major, version.minor, version.patch });
+}
+
 /// UT-102-01: 버전 비교
 pub fn checkVersion(remote_version_str: []const u8) bool {
     const remote = Version.parse(remote_version_str) orelse return false;
@@ -41,7 +46,6 @@ pub fn prepareRollback(allocator: std.mem.Allocator, data_dir: []const u8) ![]u8
     const backup_path = try std.fmt.allocPrint(allocator, "{s}/backup_v{d}.{d}.{d}", .{
         data_dir, CURRENT_VERSION.major, CURRENT_VERSION.minor, CURRENT_VERSION.patch,
     });
-    std.debug.print("📦 롤백 백업 경로: {s}\n", .{backup_path});
     return backup_path;
 }
 
@@ -52,12 +56,24 @@ test "UT-102-01: Version.parse" {
     try std.testing.expect(v.major == 1 and v.minor == 2 and v.patch == 3);
 }
 
+test "UT-102-01: Version.parse invalid" {
+    try std.testing.expect(Version.parse("1.2") == null);
+    try std.testing.expect(Version.parse("a.b.c") == null);
+}
+
+test "UT-102-01: toString" {
+    const allocator = std.testing.allocator;
+    const v_text = try toString(allocator, CURRENT_VERSION);
+    defer allocator.free(v_text);
+    try std.testing.expect(std.mem.eql(u8, v_text, CURRENT_VERSION_TEXT));
+}
+
 test "UT-102-01: checkVersion 최신" {
-    try std.testing.expect(checkVersion("1.0.0") == true);
+    try std.testing.expect(checkVersion("1.0.0"));
 }
 
 test "UT-102-01: checkVersion 동일" {
-    try std.testing.expect(checkVersion("0.1.0") == false);
+    try std.testing.expect(!checkVersion("0.1.0"));
 }
 
 test "UT-102-02: prepareRollback" {

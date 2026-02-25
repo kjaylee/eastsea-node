@@ -33,7 +33,7 @@ pub const UseCases = struct {
         nationality: []const u8,
     ) !*Attestation {
         // Create JSON data for the attestation
-        var data_buffer = std.ArrayList(u8).init(self.allocator);
+        var data_buffer = std.array_list.Managed(u8).init(self.allocator);
         defer data_buffer.deinit();
 
         try std.json.stringify(
@@ -81,7 +81,7 @@ pub const UseCases = struct {
         gpa: f32,
     ) !*Attestation {
         // Create JSON data for the attestation
-        var data_buffer = std.ArrayList(u8).init(self.allocator);
+        var data_buffer = std.array_list.Managed(u8).init(self.allocator);
         defer data_buffer.deinit();
 
         try std.json.stringify(
@@ -127,7 +127,7 @@ pub const UseCases = struct {
         is_over_age: bool,
     ) !*Attestation {
         // Create JSON data for the attestation
-        var data_buffer = std.ArrayList(u8).init(self.allocator);
+        var data_buffer = std.array_list.Managed(u8).init(self.allocator);
         defer data_buffer.deinit();
 
         try std.json.stringify(
@@ -171,7 +171,7 @@ pub const UseCases = struct {
         residency_duration: u32,
     ) !*Attestation {
         // Create JSON data for the attestation
-        var data_buffer = std.ArrayList(u8).init(self.allocator);
+        var data_buffer = std.array_list.Managed(u8).init(self.allocator);
         defer data_buffer.deinit();
 
         try std.json.stringify(
@@ -219,7 +219,7 @@ pub const UseCases = struct {
         estimated_value: u64,
     ) !*Attestation {
         // Create JSON data for the attestation
-        var data_buffer = std.ArrayList(u8).init(self.allocator);
+        var data_buffer = std.array_list.Managed(u8).init(self.allocator);
         defer data_buffer.deinit();
 
         try std.json.stringify(
@@ -267,7 +267,7 @@ pub const UseCases = struct {
         jurisdiction: []const u8,
     ) !*Attestation {
         // Create JSON data for the attestation
-        var data_buffer = std.ArrayList(u8).init(self.allocator);
+        var data_buffer = std.array_list.Managed(u8).init(self.allocator);
         defer data_buffer.deinit();
 
         try std.json.stringify(
@@ -314,7 +314,7 @@ pub const UseCases = struct {
         wallet_address: []const u8,
     ) !*Attestation {
         // Create JSON data for the attestation
-        var data_buffer = std.ArrayList(u8).init(self.allocator);
+        var data_buffer = std.array_list.Managed(u8).init(self.allocator);
         defer data_buffer.deinit();
 
         try std.json.stringify(
@@ -359,7 +359,7 @@ pub const UseCases = struct {
         points: u32,
     ) !*Attestation {
         // Create JSON data for the attestation
-        var data_buffer = std.ArrayList(u8).init(self.allocator);
+        var data_buffer = std.array_list.Managed(u8).init(self.allocator);
         defer data_buffer.deinit();
 
         try std.json.stringify(
@@ -405,7 +405,7 @@ pub const UseCases = struct {
         contribution_hours: u32,
     ) !*Attestation {
         // Create JSON data for the attestation
-        var data_buffer = std.ArrayList(u8).init(self.allocator);
+        var data_buffer = std.array_list.Managed(u8).init(self.allocator);
         defer data_buffer.deinit();
 
         try std.json.stringify(

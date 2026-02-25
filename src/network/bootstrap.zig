@@ -168,7 +168,7 @@ pub const BootstrapMessage = struct {
 // Bootstrap client for connecting to bootstrap nodes
 pub const BootstrapClient = struct {
     allocator: std.mem.Allocator,
-    bootstrap_nodes: std.ArrayList(BootstrapNodeConfig),
+    bootstrap_nodes: std.array_list.Managed(BootstrapNodeConfig),
     p2p_node: ?*p2p.P2PNode,
     dht_node: ?*dht.DHT,
     local_address: []const u8,
@@ -177,7 +177,7 @@ pub const BootstrapClient = struct {
     pub fn init(allocator: std.mem.Allocator, local_address: []const u8, local_port: u16) !BootstrapClient {
         return BootstrapClient{
             .allocator = allocator,
-            .bootstrap_nodes = std.ArrayList(BootstrapNodeConfig).init(allocator),
+            .bootstrap_nodes = std.array_list.Managed(BootstrapNodeConfig).init(allocator),
             .p2p_node = null,
             .dht_node = null,
             .local_address = try allocator.dupe(u8, local_address),
@@ -393,7 +393,7 @@ pub const BootstrapClient = struct {
 // Bootstrap server for acting as a bootstrap node
 pub const BootstrapServer = struct {
     allocator: std.mem.Allocator,
-    known_peers: std.ArrayList(BootstrapNodeConfig),
+    known_peers: std.array_list.Managed(BootstrapNodeConfig),
     p2p_node: ?*p2p.P2PNode,
     local_address: []const u8,
     local_port: u16,
@@ -402,7 +402,7 @@ pub const BootstrapServer = struct {
     pub fn init(allocator: std.mem.Allocator, local_address: []const u8, local_port: u16, max_peers: usize) !BootstrapServer {
         return BootstrapServer{
             .allocator = allocator,
-            .known_peers = std.ArrayList(BootstrapNodeConfig).init(allocator),
+            .known_peers = std.array_list.Managed(BootstrapNodeConfig).init(allocator),
             .p2p_node = null,
             .local_address = try allocator.dupe(u8, local_address),
             .local_port = local_port,
@@ -465,7 +465,7 @@ pub const BootstrapServer = struct {
     }
 
     pub fn getPeerList(self: *const BootstrapServer, allocator: std.mem.Allocator, max_peers: usize) ![]u8 {
-        var peer_list = std.ArrayList(u8).init(allocator);
+        var peer_list = std.array_list.Managed(u8).init(allocator);
         defer peer_list.deinit();
 
         const count = @min(max_peers, self.known_peers.items.len);
@@ -527,7 +527,7 @@ fn connectToPeerWithRetry(p2p_node: *p2p.P2PNode, peer_info_str: []const u8) !u3
                 while (retry_count < max_retries and !connect_success) {
                     if (retry_count > 0) {
                         std.debug.print("🔄 Retrying connection to {s}:{} (attempt {})\n", .{ address, peer_port, retry_count + 1 });
-                        std.time.sleep(1000000000); // 1 second delay
+                        std.Thread.sleep(1000000000); // 1 second delay
                     }
                     
                     _ = p2p_node.connectToPeer(peer_address) catch |err| {
@@ -715,7 +715,7 @@ fn handleNodeAnnouncement(p2p_node: *p2p.P2PNode, peer: *p2p.PeerConnection, mes
         while (retry_count < max_retries and !connect_success) {
             if (retry_count > 0) {
                 std.debug.print("🔄 Retrying connection to announced node (attempt {})\n", .{retry_count + 1});
-                std.time.sleep(500000000); // 0.5 second delay
+                std.Thread.sleep(500000000); // 0.5 second delay
             }
             
             _ = p2p_node.connectToPeer(announced_address) catch |err| {

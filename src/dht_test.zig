@@ -45,7 +45,7 @@ pub fn main() !void {
 
     // If bootstrap port is provided, connect to it
     if (bootstrap_port) |bp| {
-        std.time.sleep(1000000000); // Wait 1 second for node to fully start
+        std.Thread.sleep(1000000000); // Wait 1 second for node to fully start
 
         std.debug.print("🔗 Attempting to connect to bootstrap node at port {}\n", .{bp});
         test_node.connectToPeer("127.0.0.1", bp) catch |err| {
@@ -54,7 +54,7 @@ pub fn main() !void {
     }
 
     // Discover peers using DHT
-    std.time.sleep(2000000000); // Wait 2 seconds
+    std.Thread.sleep(2000000000); // Wait 2 seconds
     try test_node.discoverPeers();
 
     // Run the node for a while to demonstrate DHT functionality
@@ -64,7 +64,7 @@ pub fn main() !void {
     const test_duration: u32 = 30; // 30 seconds
 
     while (elapsed_time < test_duration) {
-        std.time.sleep(1000000000); // Sleep for 1 second
+        std.Thread.sleep(1000000000); // Sleep for 1 second
         elapsed_time += 1;
 
         // Every 5 seconds, show status and ping peers

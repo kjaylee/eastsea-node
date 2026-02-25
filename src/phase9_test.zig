@@ -94,7 +94,7 @@ fn runPerformanceTests(allocator: std.mem.Allocator) void {
 
     // 네트워크 지연 시간 시뮬레이션
     const ping_start = std.time.milliTimestamp();
-    std.time.sleep(1_000_000); // 1ms 지연
+    std.Thread.sleep(1_000_000); // 1ms 지연
     const ping_end = std.time.milliTimestamp();
     const latency = ping_end - ping_start;
 
@@ -239,7 +239,7 @@ fn runAllTests(allocator: std.mem.Allocator) void {
 // 보조 함수들
 fn measureMemoryUsage(allocator: std.mem.Allocator) usize {
     // 실제 메모리 사용량 측정
-    var test_allocations = std.ArrayList([]u8).init(allocator);
+    var test_allocations = std.array_list.Managed([]u8).init(allocator);
     defer {
         for (test_allocations.items) |allocation| {
             allocator.free(allocation);
@@ -326,14 +326,14 @@ fn testTimeoutHandling() void {
 
     // 시나리오 1: 짧은 타임아웃
     const short_timeout_start = std.time.milliTimestamp();
-    std.time.sleep(5_000_000); // 5ms 대기
+    std.Thread.sleep(5_000_000); // 5ms 대기
     const short_timeout_end = std.time.milliTimestamp();
     const short_duration = short_timeout_end - short_timeout_start;
     print("    Short operation: {}ms\n", .{short_duration});
 
     // 시나리오 2: 긴 타임아웃
     const long_timeout_start = std.time.milliTimestamp();
-    std.time.sleep(50_000_000); // 50ms 대기
+    std.Thread.sleep(50_000_000); // 50ms 대기
     const long_timeout_end = std.time.milliTimestamp();
     const long_duration = long_timeout_end - long_timeout_start;
     print("    Long operation: {}ms\n", .{long_duration});
@@ -360,14 +360,14 @@ fn testRecoveryMechanisms() f64 {
 
     // 연결 시뮬레이션
     var connection_active = true;
-    std.time.sleep(1_000_000); // 1ms
+    std.Thread.sleep(1_000_000); // 1ms
 
     // 연결 끊김 시뮬레이션
     connection_active = false;
     print("    Connection lost, attempting recovery...\n", .{});
 
     // 복구 시도
-    std.time.sleep(5_000_000); // 5ms recovery time
+    std.Thread.sleep(5_000_000); // 5ms recovery time
     connection_active = true; // 복구 성공
 
     if (connection_active) {
@@ -381,11 +381,11 @@ fn testRecoveryMechanisms() f64 {
 
     // 메모리 할당 실패 시뮬레이션
     var memory_available = false;
-    std.time.sleep(1_000_000); // 1ms
+    std.Thread.sleep(1_000_000); // 1ms
 
     // 메모리 정리 및 복구
     print("    Memory shortage detected, cleaning up...\n", .{});
-    std.time.sleep(3_000_000); // 3ms cleanup time
+    std.Thread.sleep(3_000_000); // 3ms cleanup time
     memory_available = true; // 복구 성공
 
     if (memory_available) {
@@ -405,7 +405,7 @@ fn testRecoveryMechanisms() f64 {
     var data_recovered = false;
     if (!std.mem.eql(u8, original_data, corrupted_data)) {
         print("    Data corruption detected, restoring from backup...\n", .{});
-        std.time.sleep(2_000_000); // 2ms restore time
+        std.Thread.sleep(2_000_000); // 2ms restore time
 
         if (std.mem.eql(u8, original_data, backup_data)) {
             data_recovered = true;

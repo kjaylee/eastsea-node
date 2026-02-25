@@ -292,7 +292,7 @@ fn runPerformanceBenchmark(allocator: std.mem.Allocator) !void {
         }
 
         // 요청 간 간격
-        std.time.sleep(100 * std.time.ns_per_ms);
+        std.Thread.sleep(100 * std.time.ns_per_ms);
     }
 
     print("\n📊 Benchmark Results\n");

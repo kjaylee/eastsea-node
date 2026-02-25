@@ -206,7 +206,7 @@ pub const PortScanner = struct {
                     error.ConnectionRefused => return err,
                     else => {
                         // 짧은 대기 후 재시도
-                        std.time.sleep(10 * std.time.ns_per_ms); // 10ms 대기
+                        std.Thread.sleep(10 * std.time.ns_per_ms); // 10ms 대기
                         continue;
                     }
                 }
@@ -423,8 +423,8 @@ fn inferInterfaceType(name: []const u8) NetworkInterface.InterfaceType {
 }
 
 /// 모든 네트워크 인터페이스를 감지하는 함수
-fn detectAllNetworkInterfaces(allocator: Allocator) !std.ArrayList(NetworkInterface) {
-    var interfaces = std.ArrayList(NetworkInterface).init(allocator);
+fn detectAllNetworkInterfaces(allocator: Allocator) !std.array_list.Managed(NetworkInterface) {
+    var interfaces = std.array_list.Managed(NetworkInterface).init(allocator);
     
     // ifconfig 명령으로 모든 인터페이스 정보 가져오기
     const ifconfig_result = std.process.Child.run(.{

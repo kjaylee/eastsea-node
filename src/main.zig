@@ -5,8 +5,7 @@ const print = std.debug.print;
 const blockchain = @import("blockchain/blockchain.zig");
 const crypto = @import("crypto/hash.zig");
 const network = @import("network/node.zig");
-const consensus = @import("consensus/poh.zig");
-const rpc = @import("rpc/server.zig");
+const runtime = @import("runtime.zig");
 const wallet = @import("cli/wallet.zig");
 
 pub fn main() !void {
@@ -17,30 +16,13 @@ pub fn main() !void {
     defer _ = gpa.deinit();
     const allocator = gpa.allocator();
 
-    // Initialize blockchain
-    var chain = try blockchain.Blockchain.init(allocator);
-    defer chain.deinit();
+    var app = try runtime.CoreRuntime.init(allocator, "127.0.0.1", 8000, 8545, "main_node");
+    defer app.deinit();
 
     print("✅ Blockchain initialized\n", .{});
     print("📦 Genesis block created\n", .{});
-    print("🔗 Block height: {}\n", .{chain.getHeight()});
-
-    // Initialize network node
-    var node = network.Node.init(allocator, "127.0.0.1", 8000);
-    defer node.deinit();
-
-    try node.start();
-    try node.discoverPeers();
-
-    // Initialize Proof of History consensus
-    var consensus_engine = try consensus.ConsensusEngine.init(allocator, "main_node");
-    defer consensus_engine.deinit();
-
+    print("🔗 Block height: {}\n", .{app.chain.getHeight()});
     print("⚡ Proof of History consensus initialized\n", .{});
-
-    // Initialize RPC server
-    var rpc_server = rpc.RpcServer.init(allocator, &chain, &node, 8545);
-    try rpc_server.start();
 
     // Initialize wallet
     var cli_wallet = wallet.WalletCLI.init(allocator);
@@ -61,7 +43,7 @@ pub fn main() !void {
     cli_wallet.wallet.listAccounts();
 
     // Demo 2: Process some transactions with PoH
-    print("\n2️⃣  Processing transactions with Proof of History...\n", .{});
+    print("\n2️⃣  Processing transactions with PoH...\n", .{});
 
     const tx1 = blockchain.Transaction{
         .from = addr1,
@@ -74,8 +56,8 @@ pub fn main() !void {
     const tx1_data = try std.fmt.allocPrint(allocator, "{s}{s}{d}{d}", .{ tx1.from, tx1.to, tx1.amount, tx1.timestamp });
     defer allocator.free(tx1_data);
 
-    try consensus_engine.processTransaction(tx1_data);
-    try chain.addTransaction(tx1);
+    try app.consensus_engine.processTransaction(tx1_data);
+    try app.chain.addTransaction(tx1);
 
     print("💸 Transaction processed: {s} -> {s} ({})\n", .{ tx1.from, tx1.to, tx1.amount });
 
@@ -83,30 +65,30 @@ pub fn main() !void {
     print("\n3️⃣  Mining blocks with consensus...\n", .{});
 
     // Process a few slots
-    try consensus_engine.processSlot();
-    try consensus_engine.processSlot();
+    try app.consensus_engine.processSlot();
+    try app.consensus_engine.processSlot();
 
     // Mine the block
-    try chain.mineBlock();
-    print("⛏️  New block mined! Height: {}\n", .{chain.getHeight()});
+    try app.chain.mineBlock();
+    print("⛏️  New block mined! Height: {}\n", .{app.chain.getHeight()});
 
-    const poh_state = consensus_engine.getCurrentPohState();
-    print("🕐 PoH State - Ticks: {}, Hash: {s}\n", .{ poh_state.tick_count, std.fmt.fmtSliceHexLower(poh_state.hash[0..8]) });
+    const poh_state = app.consensus_engine.getCurrentPohState();
+    print("🕐 PoH State - Ticks: {}, Hash: {s}\n", .{ poh_state.tick_count, std.fmt.bytesToHex(poh_state.hash[0..8], .lower) });
 
     // Demo 4: Network operations
     print("\n4️⃣  Network operations...\n", .{});
 
     const ping_msg = network.Message.init(.ping, "ping");
-    try node.broadcastMessage(ping_msg);
+    try app.node.broadcastMessage(ping_msg);
 
     // Demo 5: RPC operations
     print("\n5️⃣  RPC API demonstrations...\n", .{});
 
-    const height_response = try rpc_server.processRequest("getBlockHeight", "null");
+    const height_response = try app.rpc_server.processRequest("getBlockHeight", "null");
     defer allocator.free(height_response);
     print("📡 RPC getBlockHeight: {s}\n", .{height_response});
 
-    const node_info_response = try rpc_server.processRequest("getNodeInfo", "null");
+    const node_info_response = try app.rpc_server.processRequest("getNodeInfo", "null");
     defer allocator.free(node_info_response);
     print("📡 RPC getNodeInfo: {s}\n", .{node_info_response});
 
@@ -126,7 +108,7 @@ pub fn main() !void {
     // Demo 7: Blockchain validation
     print("\n7️⃣  Blockchain validation...\n", .{});
 
-    const is_valid = chain.isChainValid();
+    const is_valid = app.chain.isChainValid();
     print("🔍 Blockchain is valid: {}\n", .{is_valid});
 
     // Demo 8: Merkle tree operations
@@ -145,21 +127,14 @@ pub fn main() !void {
     print("\n🎉 Eastsea Clone Demo Completed Successfully!\n", .{});
     print("==========================================\n", .{});
     print("📊 Final Statistics:\n", .{});
-    print("  • Blockchain height: {}\n", .{chain.getHeight()});
-    print("  • Network peers: {}\n", .{node.getPeerCount()});
+    print("  • Blockchain height: {}\n", .{app.chain.getHeight()});
+    print("  • Network peers: {}\n", .{app.node.getPeerCount()});
     print("  • Wallet accounts: {}\n", .{cli_wallet.wallet.getAccountCount()});
     print("  • PoH ticks processed: {}\n", .{poh_state.tick_count});
-    print("  • RPC server running: {}\n", .{rpc_server.isRunning()});
+    print("  • RPC server running: {}\n", .{app.rpc_server.isRunning()});
 
     // Cleanup with proper error handling
     print("\n🧹 Shutting down components...\n", .{});
-
-    rpc_server.stop();
-    print("✅ RPC server stopped\n", .{});
-
-    node.stop();
-    print("✅ Network node stopped\n", .{});
-
     print("✅ Cleanup completed successfully\n", .{});
 }
 

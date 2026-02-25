@@ -124,7 +124,7 @@ pub const PrivacyModule = struct {
         }
         
         // Create public inputs (disclosed fields)
-        var public_inputs_buffer = std.ArrayList(u8).init(self.allocator);
+        var public_inputs_buffer = std.array_list.Managed(u8).init(self.allocator);
         defer public_inputs_buffer.deinit();
         
         for (disclosed_fields) |field| {
@@ -210,7 +210,7 @@ pub const PrivacyModule = struct {
         // disclose only the requested fields while proving they're part of the original attestation
         
         // For this simulation, we'll just create a JSON-like string with the disclosed fields
-        var disclosed = std.ArrayList(u8).init(self.allocator);
+        var disclosed = std.array_list.Managed(u8).init(self.allocator);
         defer disclosed.deinit();
         
         try disclosed.append('{');

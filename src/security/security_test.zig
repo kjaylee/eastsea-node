@@ -1,6 +1,6 @@
 const std = @import("std");
 const print = std.debug.print;
-const ArrayList = std.ArrayList;
+const ArrayList = std.array_list.Managed;
 const Allocator = std.mem.Allocator;
 const crypto = std.crypto;
 
@@ -97,7 +97,7 @@ pub const SecurityTestFramework = struct {
         };
         
         try self.test_results.append(test_result);
-        print("{}\n", .{test_result});
+        print("{any}\n", .{test_result});
     }
     
     /// 암호화 강도 테스트
@@ -240,7 +240,7 @@ pub const SecurityTestFramework = struct {
         var low_failures: u32 = 0;
         
         for (self.test_results.items) |result| {
-            print("{}\n", .{result});
+            print("{any}\n", .{result});
             
             if (result.passed) {
                 passed_count += 1;

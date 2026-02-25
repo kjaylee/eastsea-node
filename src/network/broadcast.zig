@@ -336,7 +336,7 @@ fn announceLoop(context: AnnounceContext) void {
         context.announcer.cleanupExpiredPeers();
         
         // 공지 간격만큼 대기
-        std.time.sleep(context.announcer.announce_interval_ms * std.time.ns_per_ms);
+        std.Thread.sleep(context.announcer.announce_interval_ms * std.time.ns_per_ms);
     }
     
     print("📢 Announce loop stopped\n", .{});
@@ -348,7 +348,7 @@ fn listenLoop(announcer: *BroadcastAnnouncer) void {
     
     while (announcer.is_running) {
         // TCP 폴백 모드에서는 단순히 대기
-        std.time.sleep(1000 * std.time.ns_per_ms);
+        std.Thread.sleep(1000 * std.time.ns_per_ms);
     }
     
     print("👂 Listen loop stopped\n", .{});

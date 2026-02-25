@@ -3,6 +3,7 @@ const crypto = @import("../crypto/hash.zig");
 const p2p = @import("p2p.zig");
 const dht = @import("dht.zig");
 const quic = @import("quic.zig");
+const base58 = @import("../encoding/base58.zig");
 const blockchain = @import("../blockchain/blockchain.zig");
 
 pub const NodeId = [32]u8;
@@ -53,7 +54,7 @@ pub const Node = struct {
     id: NodeId,
     address: []const u8,
     port: u16,
-    peers: std.ArrayList(PeerInfo),
+    peers: std.array_list.Managed(PeerInfo),
     allocator: std.mem.Allocator,
     is_running: bool,
     p2p_node: ?*p2p.P2PNode,
@@ -69,7 +70,7 @@ pub const Node = struct {
             .id = id,
             .address = address,
             .port = port,
-            .peers = std.ArrayList(PeerInfo).init(allocator),
+            .peers = std.array_list.Managed(PeerInfo).init(allocator),
             .allocator = allocator,
             .is_running = false,
             .p2p_node = null,
@@ -129,9 +130,13 @@ pub const Node = struct {
         
         self.is_running = true;
         std.debug.print("🌐 Node started on {s}:{}\n", .{ self.address, self.port });
-        std.debug.print("🆔 Node ID: {}\n", .{std.fmt.fmtSliceHexLower(&self.id)});
+        std.debug.print("🆔 Node ID: {s}\n", .{std.fmt.bytesToHex(&self.id, .lower)});
         std.debug.print("🔗 DHT initialized\n", .{});
         std.debug.print("퀵 QUIC node initialized on port {}\n", .{self.port + 1000});
+    }
+
+    pub fn getNodeId(self: *const Node, allocator: std.mem.Allocator) ![]u8 {
+        return base58.encode(allocator, self.id[0..]);
     }
 
     pub fn stop(self: *Node) void {
@@ -228,7 +233,7 @@ pub const Node = struct {
         for (self.peers.items, 0..) |peer, i| {
             if (std.mem.eql(u8, &peer.id, &peer_id)) {
                 _ = self.peers.swapRemove(i);
-                std.debug.print("❌ Removed peer: {}\n", .{std.fmt.fmtSliceHexLower(&peer_id)});
+                std.debug.print("❌ Removed peer: {s}\n", .{std.fmt.bytesToHex(&peer_id, .lower)});
                 break;
             }
         }
@@ -266,7 +271,7 @@ pub const Node = struct {
         std.debug.print("📤 Sending {} message to {s}:{}\n", .{ message.type, peer.address, peer.port });
         
         // Simulate network delay
-        std.time.sleep(1000000); // 1ms
+        std.Thread.sleep(1000000); // 1ms
     }
 
     pub fn handleMessage(self: *Node, from_peer: PeerInfo, message: Message) !void {
@@ -440,7 +445,7 @@ pub const Node = struct {
         
         if (self.dht) |dht_instance| {
             // Bootstrap with some known nodes (in real implementation, these would be from config)
-            var bootstrap_nodes = std.ArrayList(dht.DHTNode).init(self.allocator);
+            var bootstrap_nodes = std.array_list.Managed(dht.DHTNode).init(self.allocator);
             defer bootstrap_nodes.deinit();
             
             // Add some bootstrap nodes (these would be well-known nodes in the network)

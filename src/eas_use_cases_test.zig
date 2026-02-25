@@ -116,8 +116,8 @@ fn runKycTest(allocator: std.mem.Allocator) !void {
         "US",
     );
 
-    print("✅ KYC attestation created with ID: {}\n", .{
-        std.fmt.fmtSliceHexLower(&kyc_attestation.id),
+    print("✅ KYC attestation created with ID: {s}\n", .{
+        std.fmt.bytesToHex(&kyc_attestation.id, .lower),
     });
 
     // Verify the attestation
@@ -172,8 +172,8 @@ fn runEducationTest(allocator: std.mem.Allocator) !void {
         3.8,
     );
 
-    print("✅ Education attestation created with ID: {}\n", .{
-        std.fmt.fmtSliceHexLower(&education_attestation.id),
+    print("✅ Education attestation created with ID: {s}\n", .{
+        std.fmt.bytesToHex(&education_attestation.id, .lower),
     });
 
     // Verify the attestation
@@ -226,8 +226,8 @@ fn runAgeTest(allocator: std.mem.Allocator) !void {
         true,
     );
 
-    print("✅ Age attestation created with ID: {}\n", .{
-        std.fmt.fmtSliceHexLower(&age_attestation.id),
+    print("✅ Age attestation created with ID: {s}\n", .{
+        std.fmt.bytesToHex(&age_attestation.id, .lower),
     });
 
     // Verify the attestation
@@ -282,8 +282,8 @@ fn runResidenceTest(allocator: std.mem.Allocator) !void {
         365, // 1 year
     );
 
-    print("✅ Residence attestation created with ID: {}\n", .{
-        std.fmt.fmtSliceHexLower(&residence_attestation.id),
+    print("✅ Residence attestation created with ID: {s}\n", .{
+        std.fmt.bytesToHex(&residence_attestation.id, .lower),
     });
 
     // Verify the attestation
@@ -338,8 +338,8 @@ fn runRealEstateTest(allocator: std.mem.Allocator) !void {
         500000, // $500,000 estimated value
     );
 
-    print("✅ Real estate attestation created with ID: {}\n", .{
-        std.fmt.fmtSliceHexLower(&real_estate_attestation.id),
+    print("✅ Real estate attestation created with ID: {s}\n", .{
+        std.fmt.bytesToHex(&real_estate_attestation.id, .lower),
     });
 
     // Verify the attestation
@@ -394,8 +394,8 @@ fn runIpTest(allocator: std.mem.Allocator) !void {
         "United States",
     );
 
-    print("✅ IP attestation created with ID: {}\n", .{
-        std.fmt.fmtSliceHexLower(&ip_attestation.id),
+    print("✅ IP attestation created with ID: {s}\n", .{
+        std.fmt.bytesToHex(&ip_attestation.id, .lower),
     });
 
     // Verify the attestation
@@ -449,8 +449,8 @@ fn runDigitalAssetTest(allocator: std.mem.Allocator) !void {
         "1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa",
     );
 
-    print("✅ Digital asset attestation created with ID: {}\n", .{
-        std.fmt.fmtSliceHexLower(&digital_asset_attestation.id),
+    print("✅ Digital asset attestation created with ID: {s}\n", .{
+        std.fmt.bytesToHex(&digital_asset_attestation.id, .lower),
     });
 
     // Verify the attestation
@@ -504,8 +504,8 @@ fn runGameAchievementTest(allocator: std.mem.Allocator) !void {
         1000,
     );
 
-    print("✅ Game achievement attestation created with ID: {}\n", .{
-        std.fmt.fmtSliceHexLower(&game_attestation.id),
+    print("✅ Game achievement attestation created with ID: {s}\n", .{
+        std.fmt.bytesToHex(&game_attestation.id, .lower),
     });
 
     // Verify the attestation
@@ -560,8 +560,8 @@ fn runCommunityParticipationTest(allocator: std.mem.Allocator) !void {
         500,
     );
 
-    print("✅ Community participation attestation created with ID: {}\n", .{
-        std.fmt.fmtSliceHexLower(&community_attestation.id),
+    print("✅ Community participation attestation created with ID: {s}\n", .{
+        std.fmt.bytesToHex(&community_attestation.id, .lower),
     });
 
     // Verify the attestation

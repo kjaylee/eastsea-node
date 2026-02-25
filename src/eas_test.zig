@@ -107,8 +107,8 @@ fn runBasicEASTest(allocator: std.mem.Allocator) !void {
         false, // is_private
     );
 
-    print("✅ Attestation created with ID: {}\n", .{
-        std.fmt.fmtSliceHexLower(&attestation.id),
+    print("✅ Attestation created with ID: {s}\n", .{
+        std.fmt.bytesToHex(&attestation.id, .lower),
     });
 
     // Verify the attestation
@@ -258,7 +258,7 @@ fn runAttestationTest(allocator: std.mem.Allocator) !void {
             false, // is_private
         );
 
-        print("✅ Attestation {} created with ID: {}\n", .{ i + 1, std.fmt.fmtSliceHexLower(&attestation.id) });
+        print("✅ Attestation {} created with ID: {s}\n", .{ i + 1, std.fmt.bytesToHex(&attestation.id, .lower) });
     }
 
     print("✅ Attestation creation test completed\n", .{});
@@ -430,8 +430,8 @@ fn runPrivateAttestationTest(allocator: std.mem.Allocator) !void {
         private_key,
     );
 
-    print("✅ Private attestation created with ID: {}\n", .{
-        std.fmt.fmtSliceHexLower(&private_attestation.id),
+    print("✅ Private attestation created with ID: {s}\n", .{
+        std.fmt.bytesToHex(&private_attestation.id, .lower),
     });
 
     // Verify the private attestation

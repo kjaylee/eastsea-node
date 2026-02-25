@@ -18,7 +18,7 @@ pub const PohEntry = struct {
 pub const PohSequence = struct {
     current_hash: [32]u8,
     tick_count: u64,
-    entries: std.ArrayList(PohEntry),
+    entries: std.array_list.Managed(PohEntry),
     allocator: std.mem.Allocator,
     
     pub fn init(allocator: std.mem.Allocator, seed: ?[32]u8) PohSequence {
@@ -31,7 +31,7 @@ pub const PohSequence = struct {
         return PohSequence{
             .current_hash = initial_hash,
             .tick_count = 0,
-            .entries = std.ArrayList(PohEntry).init(allocator),
+            .entries = std.array_list.Managed(PohEntry).init(allocator),
             .allocator = allocator,
         };
     }
@@ -120,14 +120,14 @@ pub const PohVerifier = struct {
 
 // Leader Schedule - determines which node is the leader at what time
 pub const LeaderSchedule = struct {
-    leaders: std.ArrayList([]const u8),
+    leaders: std.array_list.Managed([]const u8),
     slot_duration_ms: u64,
     current_slot: u64,
     allocator: std.mem.Allocator,
     
     pub fn init(allocator: std.mem.Allocator, slot_duration_ms: u64) LeaderSchedule {
         return LeaderSchedule{
-            .leaders = std.ArrayList([]const u8).init(allocator),
+            .leaders = std.array_list.Managed([]const u8).init(allocator),
             .slot_duration_ms = slot_duration_ms,
             .current_slot = 0,
             .allocator = allocator,

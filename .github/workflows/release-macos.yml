@@ -1,0 +1,87 @@
+name: Release macOS
+
+on:
+  release:
+    types:
+      - published
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-release-macos:
+    runs-on: macos-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Zig
+        uses: mlugg/setup-zig@v1
+        with:
+          version: "0.14.0"
+
+      - name: Resolve version
+        id: version
+        run: |
+          TAG="${{ github.event.release.tag_name }}"
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "version=${TAG#v}" >> "$GITHUB_OUTPUT"
+
+      - name: Build universal binary
+        run: |
+          mkdir -p dist
+
+          zig build -Doptimize=ReleaseFast -Dtarget=x86_64-macos
+          cp zig-out/bin/eastsea-production dist/eastsea-production-x86_64
+
+          zig build -Doptimize=ReleaseFast -Dtarget=aarch64-macos
+          cp zig-out/bin/eastsea-production dist/eastsea-production-aarch64
+
+          lipo -create \
+            dist/eastsea-production-x86_64 \
+            dist/eastsea-production-aarch64 \
+            -output dist/eastsea-production-macos-universal
+
+          chmod +x dist/eastsea-production-macos-universal
+
+      - name: Build DMG
+        run: |
+          export EASTSEA_BINARY_PATH="dist/eastsea-production-macos-universal"
+          export EASTSEA_DMG_PATH="dist/EastseaNode-${{ steps.version.outputs.version }}-universal-macos.dmg"
+          bash scripts/create-dmg.sh "${{ steps.version.outputs.version }}"
+
+      - name: Generate manifest
+        run: |
+          CHECKSUM=$(shasum -a 256 dist/eastsea-production-macos-universal | awk '{print $1}')
+          cat > dist/manifest.json << EOF
+          {
+            "version": "${{ steps.version.outputs.version }}",
+            "asset_url": "https://github.com/${{ github.repository }}/releases/download/${{ steps.version.outputs.tag }}/eastsea-production-macos-universal",
+            "checksum": "sha256:${CHECKSUM}"
+          }
+          EOF
+
+      - name: Local update manifest preflight
+        run: |
+          CHECKSUM=$(shasum -a 256 dist/eastsea-production-macos-universal | awk '{print $1}')
+          cat > dist/preflight-manifest.json << EOF
+          {
+            "version": "999.9.9",
+            "asset_url": "file://$PWD/dist/eastsea-production-macos-universal",
+            "checksum": "sha256:${CHECKSUM}"
+          }
+          EOF
+          dist/eastsea-production-macos-universal --check-update --manifest-url="file://$PWD/dist/preflight-manifest.json"
+
+      - name: Update rollback UT-120-05 dryrun
+        run: |
+          zig test src/update_manager.zig --test-filter "UT-120-05"
+
+      - name: Upload release assets
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.version.outputs.tag }}
+          files: |
+            dist/eastsea-production-macos-universal
+            dist/EastseaNode-${{ steps.version.outputs.version }}-universal-macos.dmg
+            dist/manifest.json

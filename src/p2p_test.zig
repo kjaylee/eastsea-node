@@ -37,7 +37,7 @@ pub fn main() !void {
     // Connect to another peer if specified
     if (connect_to_port) |target_port| {
         print("🤝 Attempting to connect to peer on port {}\n", .{target_port});
-        std.time.sleep(1000000000); // Wait 1 second for the other node to start
+        std.Thread.sleep(1000000000); // Wait 1 second for the other node to start
 
         node.connectToPeer("127.0.0.1", target_port) catch |err| {
             print("❌ Failed to connect to peer: {}\n", .{err});
@@ -83,7 +83,7 @@ pub fn main() !void {
     print("\n⏰ Keeping node alive for 10 seconds...\n", .{});
     var i: u8 = 0;
     while (i < 10) {
-        std.time.sleep(1000000000); // 1 second
+        std.Thread.sleep(1000000000); // 1 second
         i += 1;
         print("⏱️  {} seconds remaining... (peers: {})\n", .{ 10 - i, node.getPeerCount() });
 

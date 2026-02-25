@@ -188,15 +188,15 @@ pub const MDNSRecord = struct {
 
 pub const MDNSMessage = struct {
     header: MDNSHeader,
-    questions: std.ArrayList(MDNSQuestion),
-    answers: std.ArrayList(MDNSRecord),
+    questions: std.array_list.Managed(MDNSQuestion),
+    answers: std.array_list.Managed(MDNSRecord),
     allocator: std.mem.Allocator,
 
     pub fn init(allocator: std.mem.Allocator, id: u16, is_response: bool) MDNSMessage {
         return MDNSMessage{
             .header = MDNSHeader.init(id, is_response, 0, 0),
-            .questions = std.ArrayList(MDNSQuestion).init(allocator),
-            .answers = std.ArrayList(MDNSRecord).init(allocator),
+            .questions = std.array_list.Managed(MDNSQuestion).init(allocator),
+            .answers = std.array_list.Managed(MDNSRecord).init(allocator),
             .allocator = allocator,
         };
     }
@@ -227,7 +227,7 @@ pub const MDNSMessage = struct {
         var total_size: usize = 12; // Header size
         
         // Calculate questions size
-        var question_buffers = std.ArrayList([]u8).init(self.allocator);
+        var question_buffers = std.array_list.Managed([]u8).init(self.allocator);
         defer {
             for (question_buffers.items) |buffer| {
                 self.allocator.free(buffer);
@@ -242,7 +242,7 @@ pub const MDNSMessage = struct {
         }
         
         // Calculate answers size
-        var answer_buffers = std.ArrayList([]u8).init(self.allocator);
+        var answer_buffers = std.array_list.Managed([]u8).init(self.allocator);
         defer {
             for (answer_buffers.items) |buffer| {
                 self.allocator.free(buffer);
@@ -288,7 +288,7 @@ pub const MDNSDiscovery = struct {
     service_instance: []const u8,
     p2p_node: ?*p2p.P2PNode,
     bootstrap_client: ?*bootstrap.BootstrapClient,
-    discovered_peers: std.ArrayList(DiscoveredPeer),
+    discovered_peers: std.array_list.Managed(DiscoveredPeer),
     running: bool,
     background_thread: ?std.Thread,
 
@@ -328,7 +328,7 @@ pub const MDNSDiscovery = struct {
         // Generate unique service instance name
         var node_id: [8]u8 = undefined;
         std.crypto.random.bytes(&node_id);
-        const service_instance = try std.fmt.allocPrint(allocator, "{s}{s}", .{ SERVICE_INSTANCE_PREFIX, std.fmt.fmtSliceHexLower(&node_id) });
+        const service_instance = try std.fmt.allocPrint(allocator, "{s}{s}", .{ SERVICE_INSTANCE_PREFIX, std.fmt.bytesToHex(&node_id, .lower) });
 
         return MDNSDiscovery{
             .allocator = allocator,
@@ -338,7 +338,7 @@ pub const MDNSDiscovery = struct {
             .service_instance = service_instance,
             .p2p_node = null,
             .bootstrap_client = null,
-            .discovered_peers = std.ArrayList(DiscoveredPeer).init(allocator),
+            .discovered_peers = std.array_list.Managed(DiscoveredPeer).init(allocator),
             .running = false,
             .background_thread = null,
         };
@@ -509,11 +509,11 @@ pub const MDNSDiscovery = struct {
                 // Receive mDNS messages
                 const bytes_received = std.posix.recv(socket_fd, &buffer, 0) catch |err| {
                     if (err == error.WouldBlock or err == error.Again) {
-                        std.time.sleep(100_000_000); // 100ms
+                        std.Thread.sleep(100_000_000); // 100ms
                         continue;
                     }
                     std.debug.print("⚠️  mDNS recv error: {}\n", .{err});
-                    std.time.sleep(1_000_000_000); // 1 second
+                    std.Thread.sleep(1_000_000_000); // 1 second
                     continue;
                 };
                 
@@ -523,7 +523,7 @@ pub const MDNSDiscovery = struct {
                     };
                 }
             } else {
-                std.time.sleep(1_000_000_000); // 1 second if no socket
+                std.Thread.sleep(1_000_000_000); // 1 second if no socket
             }
         }
         

@@ -17,7 +17,7 @@ pub const Transaction = struct {
 pub const Block = struct {
     index: u64,
     timestamp: i64,
-    transactions: std.ArrayList(Transaction),
+    transactions: std.array_list.Managed(Transaction),
     previous_hash: []u8,
     hash: []u8,
     nonce: u64,
@@ -26,7 +26,7 @@ pub const Block = struct {
         return Block{
             .index = index,
             .timestamp = std.time.timestamp(),
-            .transactions = std.ArrayList(Transaction).init(allocator),
+            .transactions = std.array_list.Managed(Transaction).init(allocator),
             .previous_hash = try allocator.dupe(u8, previous_hash),
             .hash = &[_]u8{},
             .nonce = 0,
@@ -46,7 +46,7 @@ pub const Block = struct {
     }
 
     pub fn calculateHash(self: *Block, allocator: std.mem.Allocator) ![]u8 {
-        var tx_data = std.ArrayList(u8).init(allocator);
+        var tx_data = std.array_list.Managed(u8).init(allocator);
         defer tx_data.deinit();
 
         for (self.transactions.items) |tx| {
@@ -87,16 +87,16 @@ pub const Block = struct {
 };
 
 pub const Blockchain = struct {
-    chain: std.ArrayList(Block),
-    pending_transactions: std.ArrayList(Transaction),
+    chain: std.array_list.Managed(Block),
+    pending_transactions: std.array_list.Managed(Transaction),
     mining_reward: u64,
     difficulty: u32,
     allocator: std.mem.Allocator,
 
     pub fn init(allocator: std.mem.Allocator) !Blockchain {
         var blockchain = Blockchain{
-            .chain = std.ArrayList(Block).init(allocator),
-            .pending_transactions = std.ArrayList(Transaction).init(allocator),
+            .chain = std.array_list.Managed(Block).init(allocator),
+            .pending_transactions = std.array_list.Managed(Transaction).init(allocator),
             .mining_reward = 100,
             .difficulty = 2,
             .allocator = allocator,
@@ -169,6 +169,36 @@ pub const Blockchain = struct {
     
     pub fn hasPendingTransactions(self: *const Blockchain) bool {
         return self.pending_transactions.items.len > 0;
+    }
+
+    pub fn getAddressBalance(self: *const Blockchain, address: []const u8) u64 {
+        var balance: i128 = 0;
+
+        for (self.chain.items) |*block| {
+            for (block.transactions.items) |tx| {
+                if (std.mem.eql(u8, tx.from, address)) {
+                    balance -= @as(i128, tx.amount);
+                }
+                if (std.mem.eql(u8, tx.to, address)) {
+                    balance += @as(i128, tx.amount);
+                }
+            }
+        }
+
+        for (self.pending_transactions.items) |tx| {
+            if (std.mem.eql(u8, tx.from, address)) {
+                balance -= @as(i128, tx.amount);
+            }
+            if (std.mem.eql(u8, tx.to, address)) {
+                balance += @as(i128, tx.amount);
+            }
+        }
+
+        if (balance < 0) {
+            return 0;
+        }
+
+        return @intCast(balance);
     }
     
     pub fn validateChain(self: *const Blockchain) bool {

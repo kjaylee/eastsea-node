@@ -10,23 +10,35 @@ pub const WebServer = struct {
     allocator: std.mem.Allocator,
     port: u16,
     thread: ?std.Thread = null,
-    running: bool = false,
-    rpc_handler: ?*const fn ([]const u8, std.mem.Allocator) anyerror![]u8 = null,
+    running: std.atomic.Value(bool) = std.atomic.Value(bool).init(false),
+    rpc_handler_ctx: ?*anyopaque = null,
+    rpc_handler: ?*const fn (*anyopaque, []const u8, std.mem.Allocator) anyerror![]u8 = null,
 
     pub fn init(allocator: std.mem.Allocator, port: u16) WebServer {
         return .{ .allocator = allocator, .port = port };
     }
 
     pub fn start(self: *WebServer) !void {
-        self.running = true;
+        self.running.store(true, .release);
         self.thread = try std.Thread.spawn(.{}, listenLoop, .{self});
         std.debug.print("🌐 Web Dashboard: http://127.0.0.1:{d}\n", .{self.port});
     }
 
+    pub fn setRpcHandler(
+        self: *WebServer,
+        ctx: *anyopaque,
+        handler: ?*const fn (*anyopaque, []const u8, std.mem.Allocator) anyerror![]u8,
+    ) void {
+        self.rpc_handler_ctx = ctx;
+        self.rpc_handler = handler;
+    }
+
     pub fn stop(self: *WebServer) void {
-        self.running = false;
+        if (!self.running.load(.acquire)) return;
+
+        self.running.store(false, .release);
         if (self.thread) |t| {
-            t.detach();
+            t.join();
             self.thread = null;
         }
         std.debug.print("🛑 Web server stopped\n", .{});
@@ -34,15 +46,19 @@ pub const WebServer = struct {
 
     fn listenLoop(self: *WebServer) void {
         const addr = net.Address.initIp4(.{ 0, 0, 0, 0 }, self.port);
-        var server = addr.listen(.{ .reuse_address = true }) catch |err| {
+        var server = addr.listen(.{ .reuse_address = true, .force_nonblocking = true }) catch |err| {
             std.debug.print("❌ Web server bind failed on :{d}: {}\n", .{ self.port, err });
             return;
         };
         defer server.deinit();
 
-        while (self.running) {
+        while (self.running.load(.acquire)) {
             const conn = server.accept() catch |err| {
-                if (!self.running) break;
+                if (err == std.posix.AcceptError.WouldBlock) {
+                    std.time.sleep(20 * std.time.ns_per_ms);
+                    continue;
+                }
+                if (!self.running.load(.acquire)) break;
                 std.debug.print("⚠️  Accept error: {}\n", .{err});
                 continue;
             };
@@ -123,6 +139,23 @@ pub const WebServer = struct {
 
     /// JSON-RPC 메서드 라우팅
     fn handleJsonRpc(self: *WebServer, stream: net.Stream, body: []const u8) void {
+        if (self.rpc_handler) |handler| {
+            if (self.rpc_handler_ctx) |ctx| {
+                const response = handler(ctx, body, self.allocator) catch {
+                    self.sendResponse(
+                        stream,
+                        "500 Internal Server Error",
+                        "application/json",
+                        \\{"jsonrpc":"2.0","error":{"code":-32603,"message":"RPC handler error"},"id":null}
+                    );
+                    return;
+                };
+                defer self.allocator.free(response);
+                self.sendJsonResponse(stream, response);
+                return;
+            }
+        }
+
         // 메서드 추출 (간단한 문자열 매칭)
         if (std.mem.indexOf(u8, body, "getBlockHeight")) |_| {
             self.sendResponse(stream, "200 OK", "application/json",

@@ -1,12 +1,11 @@
 const std = @import("std");
+const builtin = @import("builtin");
 const print = std.debug.print;
 
 // 기존 코어 모듈
 const blockchain = @import("blockchain/blockchain.zig");
-const crypto = @import("crypto/hash.zig");
 const network = @import("network/node.zig");
-const consensus = @import("consensus/poh.zig");
-const rpc = @import("rpc/server.zig");
+const runtime = @import("runtime.zig");
 const wallet = @import("cli/wallet.zig");
 
 // REQ 신규 모듈 통합
@@ -24,6 +23,8 @@ const rbac = @import("rbac.zig");
 const web_dashboard = @import("web_dashboard.zig");
 const upnp = @import("upnp.zig");
 const vm = @import("vm.zig");
+const update_manager = @import("update_manager.zig");
+const atomic = std.atomic;
 
 /// ~/.eastsea 경로 결정
 fn getEastseaHome(allocator: std.mem.Allocator) ![]u8 {
@@ -34,10 +35,35 @@ fn getEastseaHome(allocator: std.mem.Allocator) ![]u8 {
     return try std.fmt.allocPrint(allocator, "{s}/.eastsea", .{home});
 }
 
+var shutdown_flag_ref: ?*atomic.Value(bool) = null;
+
+fn productionSignalHandler(_: i32) callconv(.c) void {
+    if (shutdown_flag_ref) |flag| {
+        flag.store(true, .release);
+    }
+}
+
+fn installSignalHandlers(flag: *atomic.Value(bool)) void {
+    shutdown_flag_ref = flag;
+
+    if (builtin.os.tag == .windows or builtin.os.tag == .wasi) return;
+
+    const posix = std.posix;
+    const act = posix.Sigaction{
+        .handler = .{ .handler = productionSignalHandler },
+        .mask = posix.sigemptyset(),
+        .flags = 0,
+    };
+    posix.sigaction(posix.SIG.INT, &act, null);
+    posix.sigaction(posix.SIG.TERM, &act, null);
+}
+
 pub fn main() !void {
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
     defer _ = gpa.deinit();
     const allocator = gpa.allocator();
+    var should_shutdown = atomic.Value(bool).init(false);
+    installSignalHandlers(&should_shutdown);
 
     // Parse arguments
     const args = try std.process.argsAlloc(allocator);
@@ -46,6 +72,14 @@ pub fn main() !void {
     var demo_mode = false;
     var show_help = false;
     var show_diag = false;
+    var run_update_check = true;
+    var run_auto_update = true;
+    var check_update_only = false;
+    var skip_update = false;
+    var manifest_override = false;
+    var manifest_url: []const u8 = update_manager.DEFAULT_MANIFEST_URL;
+    var manifest_url_alloc: ?[]u8 = null;
+    defer if (manifest_url_alloc) |url| allocator.free(url);
 
     for (args[1..]) |arg| {
         if (std.mem.eql(u8, arg, "--demo")) {
@@ -54,6 +88,29 @@ pub fn main() !void {
             show_help = true;
         } else if (std.mem.eql(u8, arg, "--diag")) {
             show_diag = true;
+        } else if (std.mem.eql(u8, arg, "--check-update")) {
+            run_auto_update = false;
+            check_update_only = true;
+            run_update_check = true;
+        } else if (std.mem.eql(u8, arg, "--no-auto-update")) {
+            run_auto_update = false;
+        } else if (std.mem.eql(u8, arg, "--no-update-check")) {
+            run_update_check = false;
+            run_auto_update = false;
+        } else if (std.mem.eql(u8, arg, "--auto-update")) {
+            run_auto_update = true;
+        } else if (std.mem.eql(u8, arg, "--skip-update")) {
+            skip_update = true;
+        } else if (std.mem.startsWith(u8, arg, "--manifest-url=")) {
+            manifest_url = @as([]const u8, arg["--manifest-url=".len..]);
+            manifest_override = true;
+        }
+    }
+
+    if (!manifest_override and manifest_url_alloc == null) {
+        if (std.process.getEnvVarOwned(allocator, "EASTSEA_MANIFEST_URL") catch null) |env_url| {
+            manifest_url_alloc = env_url;
+            manifest_url = env_url;
         }
     }
 
@@ -79,6 +136,8 @@ pub fn main() !void {
         updater.CURRENT_VERSION.patch,
     });
     print("==========================================\n", .{});
+    try handleUpdateFlow(allocator, manifest_url, run_update_check, run_auto_update, skip_update, args[0]);
+    if (check_update_only) return;
 
     // ========================================
     // Phase 1: 온보딩 (REQ-101)
@@ -162,7 +221,7 @@ pub fn main() !void {
     // RBAC 확인
     const admin_can_delete = rbac.authorize(.admin, "config", "delete");
     const viewer_can_write = rbac.authorize(.viewer, "config", "write");
-    print("   RBAC: admin.delete={}, viewer.write={}\n", .{ admin_can_delete, viewer_can_write });
+    print("   RBAC: admin.delete={}, viewer.write={}\n", .{admin_can_delete, viewer_can_write});
 
     // ========================================
     // Phase 5: 버전 확인 (REQ-102)
@@ -189,7 +248,7 @@ pub fn main() !void {
     if (demo_mode) {
         try runDemo(allocator, node_config);
     } else {
-        try runProductionNode(allocator, node_config);
+        try runProductionNode(allocator, node_config, &web_server, &should_shutdown);
     }
 }
 
@@ -198,42 +257,94 @@ fn printUsage() void {
     print("사용법: eastsea [옵션]\n\n", .{});
     print("  --demo    데모 모드로 실행\n", .{});
     print("  --diag    진단 리포트 출력\n", .{});
+    print("  --check-update   최신 버전만 확인하고 종료\n", .{});
+    print("  --auto-update    새 버전 발견 시 즉시 자동 다운로드/교체 후 재시작 (기본값)\n", .{});
+    print("  --no-auto-update 최신 버전만 확인하고 자동 갱신 생략\n", .{});
+    print("  --no-update-check 업데이트 확인 자체를 생략\n", .{});
+    print("  --skip-update    재시작 시 업데이트 스킵 플래그\n", .{});
+    print("  --manifest-url=<url> 업데이트 매니페스트 URL 지정 (기본값: 기본 GitHub manifest 또는 EASTSEA_MANIFEST_URL)\n", .{});
     print("  --help    도움말\n", .{});
 }
 
-fn runProductionNode(allocator: std.mem.Allocator, config: onboarding.NodeConfig) !void {
+fn handleUpdateFlow(
+    allocator: std.mem.Allocator,
+    manifest_url: []const u8,
+    check_update: bool,
+    auto_update: bool,
+    skip_update: bool,
+    current_exe_path: []const u8,
+) !void {
+    if (skip_update) return;
+    if (!check_update) return;
+
+    var latest = update_manager.checkForUpdate(allocator, manifest_url) catch |err| {
+        print("⚠️  업데이트 확인 실패: {s}\n", .{@errorName(err)});
+        return;
+    };
+    defer if (latest) |*m| m.deinit(allocator);
+
+    if (latest == null) {
+        print("✅ 현재가 최신 버전(v{s})입니다.\n", .{updater.CURRENT_VERSION_TEXT});
+        return;
+    }
+
+    const manifest = latest.?;
+    print("🆕 신규 버전 발견: v{s} (현재 {s})\n", .{
+        manifest.version_text,
+        updater.CURRENT_VERSION_TEXT,
+    });
+    if (manifest.release_notes) |notes| {
+        print("📝 릴리스 노트: {s}\n", .{notes});
+    }
+
+    if (!auto_update) {
+        print("ℹ️  새 버전이 확인되었지만 자동 갱신이 비활성화되어 현재는 적용하지 않습니다.\n", .{});
+        print("   다음 실행에서 기본 실행 또는 --auto-update로 재시작하면 자동 적용됩니다.\n", .{});
+        return;
+    }
+
+    print("⏬ 자동 업데이트 적용 중...\n", .{});
+    update_manager.applyUpdate(allocator, manifest, current_exe_path) catch |err| {
+        print("❌ 업데이트 적용 실패: {s}\n", .{@errorName(err)});
+        return;
+    };
+    print("✅ 업데이트 적용 완료. 새 실행 파일로 재시작합니다.\n", .{});
+    try update_manager.restartSelf(allocator, current_exe_path, true);
+    std.process.exit(0);
+}
+
+fn forwardDashboardRpc(
+    ctx: *anyopaque,
+    body: []const u8,
+    allocator: std.mem.Allocator,
+) anyerror![]u8 {
+    _ = allocator;
+    const app_runtime: *runtime.CoreRuntime = @ptrCast(@alignCast(ctx));
+    return app_runtime.rpc_server.handleRequest(body);
+}
+
+fn runProductionNode(
+    allocator: std.mem.Allocator,
+    config: onboarding.NodeConfig,
+    web_server: *web_dashboard.WebServer,
+    should_shutdown: *atomic.Value(bool),
+) !void {
     print("==========================================\n", .{});
     print("📍 Node: {s}:{d}\n", .{ config.node_address, config.node_port });
     print("🌐 RPC:  {s}:{d}\n", .{ config.node_address, config.rpc_port });
     print("⚡ Validator: {}\n", .{config.is_validator});
 
-    // 코어 초기화
-    var chain = try blockchain.Blockchain.init(allocator);
-    defer chain.deinit();
-    print("✅ Blockchain initialized (Height: {d})\n", .{chain.getHeight()});
-
-    var node = network.Node.init(allocator, config.node_address, config.node_port);
-    defer node.deinit();
-    try node.start();
-    try node.discoverPeers();
-
     const node_id = try std.fmt.allocPrint(allocator, "node_{d}", .{config.node_port});
     defer allocator.free(node_id);
 
-    var consensus_engine = try consensus.ConsensusEngine.init(allocator, node_id);
-    defer consensus_engine.deinit();
+    var app_runtime = try runtime.CoreRuntime.init(allocator, config.node_address, config.node_port, config.rpc_port, node_id);
+    defer app_runtime.deinit();
+    defer web_server.stop();
+
     print("⚡ Consensus engine initialized\n", .{});
 
-    var rpc_server = rpc.RpcServer.init(allocator, &chain, &node, config.rpc_port);
-    try rpc_server.start();
-    defer rpc_server.stop();
-
     // RPC 응답 검증 (REQ-021)
-    const info = try rpc_server.processRequest("getNodeInfo", "null");
-    defer allocator.free(info);
-    if (!rpc_validator.validateRpcResponse(info)) {
-        print("⚠️  RPC 응답에 mock 값 감지\n", .{});
-    }
+    web_server.setRpcHandler(&app_runtime, &forwardDashboardRpc);
 
     // 모니터링 시작 (REQ-121)
     const start_time = std.time.timestamp();
@@ -247,26 +358,26 @@ fn runProductionNode(allocator: std.mem.Allocator, config: onboarding.NodeConfig
     const slot_duration_ns = 400 * std.time.ns_per_ms;
     var last_stats_time = std.time.timestamp();
 
-    while (true) {
+    while (!should_shutdown.load(.acquire)) {
         if (slot_timer.read() >= slot_duration_ns) {
-            try consensus_engine.processSlot();
+            try app_runtime.consensus_engine.processSlot();
 
-            if (consensus_engine.isCurrentLeader() and chain.hasPendingTransactions()) {
-                try chain.mineBlock();
-                print("⛏️  Block mined! Height: {d}\n", .{chain.getHeight()});
+            if (app_runtime.consensus_engine.isCurrentLeader() and app_runtime.chain.hasPendingTransactions()) {
+                try app_runtime.chain.mineBlock();
+                print("⛏️  Block mined! Height: {d}\n", .{app_runtime.chain.getHeight()});
             }
 
             slot_timer.reset();
         }
 
-        _ = processNetworkMessages(&node) catch {};
+        _ = processNetworkMessages(app_runtime.node) catch {};
 
         // 30초마다 통계 + 모니터링 (REQ-121)
         const current_time = std.time.timestamp();
         if (current_time - last_stats_time >= 30) {
             const metrics = monitoring.collectMetrics(
-                chain.getHeight(),
-                @as(u32, @intCast(node.getPeerCount())),
+                app_runtime.chain.getHeight(),
+                @as(u32, @intCast(app_runtime.node.getPeerCount())),
                 start_time,
             );
             const alert = monitoring.alertThreshold(&metrics);
@@ -276,30 +387,32 @@ fn runProductionNode(allocator: std.mem.Allocator, config: onboarding.NodeConfig
 
             // 상태 영속화 (REQ-010)
             persistence.saveState(allocator, "/tmp/.eastsea_state.json", .{
-                .block_height = chain.getHeight(),
-                .peer_count = @intCast(node.getPeerCount()),
+                .block_height = app_runtime.chain.getHeight(),
+                .peer_count = @intCast(app_runtime.node.getPeerCount()),
                 .last_checkpoint = current_time,
             }) catch {};
 
-            printNodeStats(&chain, &node, &consensus_engine);
+            printNodeStats(&app_runtime);
             last_stats_time = current_time;
         }
 
-        std.time.sleep(10 * std.time.ns_per_ms);
+        std.Thread.sleep(10 * std.time.ns_per_ms);
     }
+
+    print("🛑 Production node shutdown requested\n", .{});
 }
 
 fn processNetworkMessages(node: *network.Node) !void {
     _ = node;
 }
 
-fn printNodeStats(chain: *blockchain.Blockchain, node: *network.Node, consensus_engine: *consensus.ConsensusEngine) void {
-    const poh_state = consensus_engine.getCurrentPohState();
+fn printNodeStats(app_runtime: *runtime.CoreRuntime) void {
+    const poh_state = app_runtime.consensus_engine.getCurrentPohState();
     print("\n📊 Node Statistics:\n", .{});
-    print("  • Blockchain Height: {d}\n", .{chain.getHeight()});
-    print("  • Connected Peers: {d}\n", .{node.getPeerCount()});
+    print("  • Blockchain Height: {d}\n", .{app_runtime.chain.getHeight()});
+    print("  • Connected Peers: {d}\n", .{app_runtime.node.getPeerCount()});
     print("  • PoH Ticks: {d}\n", .{poh_state.tick_count});
-    print("  • Node Status: {s}\n", .{if (node.isConnected()) "Connected" else "Disconnected"});
+    print("  • Node Status: {s}\n", .{if (app_runtime.node.isConnected()) "Connected" else "Disconnected"});
     print("==========================================\n", .{});
 }
 
@@ -308,28 +421,15 @@ fn runDemo(allocator: std.mem.Allocator, config: onboarding.NodeConfig) !void {
     print("🎯 Demo Sequence Starting...\n", .{});
     print("==========================================\n", .{});
 
-    // 코어 초기화
-    var chain = try blockchain.Blockchain.init(allocator);
-    defer chain.deinit();
-    print("✅ Blockchain initialized (Height: {d})\n", .{chain.getHeight()});
+    var app_runtime = try runtime.CoreRuntime.init(allocator, config.node_address, config.node_port, config.rpc_port, "main_node");
+    defer app_runtime.deinit();
 
-    var node = network.Node.init(allocator, config.node_address, config.node_port);
-    defer node.deinit();
-    try node.start();
-    try node.discoverPeers();
+    print("✅ Blockchain initialized (Height: {d})\n", .{app_runtime.chain.getHeight()});
 
-    var consensus_engine = try consensus.ConsensusEngine.init(allocator, "main_node");
-    defer consensus_engine.deinit();
-    print("⚡ Proof of History consensus initialized\n", .{});
-
-    var rpc_server = rpc.RpcServer.init(allocator, &chain, &node, config.rpc_port);
-    try rpc_server.start();
-    defer rpc_server.stop();
-
+    // Demo 1: Wallet
     var cli_wallet = wallet.WalletCLI.init(allocator);
     defer cli_wallet.deinit();
 
-    // Demo 1: Wallet
     print("\n1️⃣  Creating wallet accounts...\n", .{});
     const addr1 = try cli_wallet.wallet.createAccount();
     const addr2 = try cli_wallet.wallet.createAccount();
@@ -347,32 +447,37 @@ fn runDemo(allocator: std.mem.Allocator, config: onboarding.NodeConfig) !void {
     };
     const tx1_data = try std.fmt.allocPrint(allocator, "{s}{s}{d}{d}", .{ tx1.from, tx1.to, tx1.amount, tx1.timestamp });
     defer allocator.free(tx1_data);
-    try consensus_engine.processTransaction(tx1_data);
-    try chain.addTransaction(tx1);
+    try app_runtime.consensus_engine.processTransaction(tx1_data);
+    try app_runtime.chain.addTransaction(tx1);
     print("💸 Transaction: {s} -> {s} ({d})\n", .{ tx1.from, tx1.to, tx1.amount });
 
     // Demo 3: Mine
     print("\n3️⃣  Mining blocks...\n", .{});
-    try consensus_engine.processSlot();
-    try consensus_engine.processSlot();
-    try chain.mineBlock();
-    print("⛏️  Block mined! Height: {d}\n", .{chain.getHeight()});
+    try app_runtime.consensus_engine.processSlot();
+    try app_runtime.consensus_engine.processSlot();
+    try app_runtime.chain.mineBlock();
+    print("⛏️  Block mined! Height: {d}\n", .{app_runtime.chain.getHeight()});
 
     // Demo 4: Network
     print("\n4️⃣  Network operations...\n", .{});
     const ping_msg = network.Message.init(.ping, "ping");
-    try node.broadcastMessage(ping_msg);
+    try app_runtime.node.broadcastMessage(ping_msg);
 
     // Demo 5: RPC + mock 검증 (REQ-021)
     print("\n5️⃣  RPC API + mock 검증...\n", .{});
-    const height_response = try rpc_server.processRequest("getBlockHeight", "null");
+    const height_response = try app_runtime.rpc_server.processRequest("getBlockHeight", "null");
     defer allocator.free(height_response);
     print("📡 getBlockHeight: {s}\n", .{height_response});
 
-    const node_info = try rpc_server.processRequest("getNodeInfo", "null");
-    defer allocator.free(node_info);
-    const is_clean = rpc_validator.validateRpcResponse(node_info);
-    print("📡 getNodeInfo: {s} (mock-free: {})\n", .{ node_info, is_clean });
+    const node_info = app_runtime.rpc_server.processRequest("getNodeInfo", "null") catch |err| blk: {
+        print("⚠️  RPC getNodeInfo 실패: {s}\n", .{@errorName(err)});
+        break :blk null;
+    };
+    if (node_info) |*node_info_response| {
+        defer allocator.free(node_info_response.*);
+        const is_clean = rpc_validator.validateRpcResponse(node_info_response.*);
+        print("📡 getNodeInfo: {s} (mock-free: {})\n", .{ node_info_response.*, is_clean });
+    }
 
     // Demo 6: Wallet transfer
     print("\n6️⃣  Wallet transfer...\n", .{});
@@ -393,7 +498,7 @@ fn runDemo(allocator: std.mem.Allocator, config: onboarding.NodeConfig) !void {
 
     // Demo 8: 모니터링 (REQ-121)
     print("\n8️⃣  모니터링 스냅샷...\n", .{});
-    const metrics = monitoring.collectMetrics(chain.getHeight(), @intCast(node.getPeerCount()), std.time.timestamp() - 60);
+    const metrics = monitoring.collectMetrics(app_runtime.chain.getHeight(), @intCast(app_runtime.node.getPeerCount()), std.time.timestamp() - 60);
     const healthy = monitoring.healthCheck(&metrics);
     print("💓 healthy={}, uptime={d}s, alert={s}\n", .{
         healthy,
@@ -405,8 +510,8 @@ fn runDemo(allocator: std.mem.Allocator, config: onboarding.NodeConfig) !void {
     print("\n9️⃣  상태 영속화...\n", .{});
     const state_path = "/tmp/.eastsea_state.json";
     try persistence.saveState(allocator, state_path, .{
-        .block_height = chain.getHeight(),
-        .peer_count = @intCast(node.getPeerCount()),
+        .block_height = app_runtime.chain.getHeight(),
+        .peer_count = @intCast(app_runtime.node.getPeerCount()),
         .last_checkpoint = std.time.timestamp(),
     });
     const loaded = try persistence.loadState(allocator, state_path);
@@ -414,7 +519,7 @@ fn runDemo(allocator: std.mem.Allocator, config: onboarding.NodeConfig) !void {
 
     // Demo 10: Validation
     print("\n🔟 Blockchain validation...\n", .{});
-    print("🔍 Chain valid: {}\n", .{chain.isChainValid()});
+    print("🔍 Chain valid: {}\n", .{app_runtime.chain.isChainValid()});
 
     // Demo 11: 스마트 컨트랙트 VM
     print("\n📜 Demo 11: 스마트 컨트랙트 VM...\n", .{});
@@ -472,15 +577,15 @@ fn runDemo(allocator: std.mem.Allocator, config: onboarding.NodeConfig) !void {
     }
 
     // Final Stats
-    const poh = consensus_engine.getCurrentPohState();
+    const poh = app_runtime.consensus_engine.getCurrentPohState();
     print("\n🎉 Eastsea Node Demo Completed!\n", .{});
     print("==========================================\n", .{});
     print("📊 Final Statistics:\n", .{});
-    print("  • Blockchain height: {d}\n", .{chain.getHeight()});
-    print("  • Network peers: {d}\n", .{node.getPeerCount()});
+    print("  • Blockchain height: {d}\n", .{app_runtime.chain.getHeight()});
+    print("  • Network peers: {d}\n", .{app_runtime.node.getPeerCount()});
     print("  • Wallet accounts: {d}\n", .{cli_wallet.wallet.getAccountCount()});
     print("  • PoH ticks: {d}\n", .{poh.tick_count});
-    print("  • RPC server: {}\n", .{rpc_server.isRunning()});
+    print("  • RPC server: {}\n", .{app_runtime.rpc_server.isRunning()});
     print("  • Auth: ✅  RBAC: ✅  TLS: ✅\n", .{});
     print("  • Monitoring: ✅  Persistence: ✅\n", .{});
     print("  • Smart Contract VM: ✅\n", .{});

@@ -15,7 +15,7 @@ pub const NodeConfig = struct {
 
     /// 설정을 JSON 바이트로 직렬화
     pub fn serialize(self: *const NodeConfig, allocator: std.mem.Allocator) ![]u8 {
-        var buf = std.ArrayList(u8).init(allocator);
+        var buf = std.array_list.Managed(u8).init(allocator);
         errdefer buf.deinit();
 
         const writer = buf.writer();

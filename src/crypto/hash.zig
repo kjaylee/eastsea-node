@@ -8,7 +8,7 @@ pub fn sha256(allocator: std.mem.Allocator, data: []const u8) ![]u8 {
     
     // Convert to hex string
         const hex_string = try allocator.alloc(u8, 64);
-    _ = std.fmt.bufPrint(hex_string, "{}", .{std.fmt.fmtSliceHexLower(&hash_bytes)}) catch unreachable;
+    _ = std.fmt.bufPrint(hex_string, "{s}", .{std.fmt.bytesToHex(&hash_bytes, .lower)}) catch unreachable;
     
     return hex_string;
 }
@@ -52,7 +52,7 @@ pub const MerkleTree = struct {
             self.root = null;
         }
 
-        var current_level = std.ArrayList([]u8).init(self.allocator);
+        var current_level = std.array_list.Managed([]u8).init(self.allocator);
         defer {
             for (current_level.items) |hash| {
                 self.allocator.free(hash);
@@ -68,7 +68,7 @@ pub const MerkleTree = struct {
 
         // Build tree bottom-up
         while (current_level.items.len > 1) {
-            var next_level = std.ArrayList([]u8).init(self.allocator);
+            var next_level = std.array_list.Managed([]u8).init(self.allocator);
             defer next_level.deinit();
 
             var i: usize = 0;

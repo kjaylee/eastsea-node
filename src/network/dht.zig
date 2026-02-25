@@ -74,13 +74,13 @@ pub const DHTNode = struct {
 };
 
 pub const KBucket = struct {
-    nodes: std.ArrayList(DHTNode),
+    nodes: std.array_list.Managed(DHTNode),
     bucket_index: u8,
     allocator: std.mem.Allocator,
 
     pub fn init(allocator: std.mem.Allocator, bucket_index: u8) KBucket {
         return KBucket{
-            .nodes = std.ArrayList(DHTNode).init(allocator),
+            .nodes = std.array_list.Managed(DHTNode).init(allocator),
             .bucket_index = bucket_index,
             .allocator = allocator,
         };
@@ -137,11 +137,11 @@ pub const KBucket = struct {
         }
     }
 
-    pub fn getClosestNodes(self: *const KBucket, target_id: NodeId, count: usize) !std.ArrayList(DHTNode) {
-        var result = std.ArrayList(DHTNode).init(self.allocator);
+    pub fn getClosestNodes(self: *const KBucket, target_id: NodeId, count: usize) !std.array_list.Managed(DHTNode) {
+        var result = std.array_list.Managed(DHTNode).init(self.allocator);
         
         // Create a copy of nodes with calculated distances
-        var nodes_with_distance = std.ArrayList(DHTNode).init(self.allocator);
+        var nodes_with_distance = std.array_list.Managed(DHTNode).init(self.allocator);
         defer nodes_with_distance.deinit();
         
         for (self.nodes.items) |dht_node| {
@@ -224,14 +224,14 @@ pub const DHTRoutingTable = struct {
         self.buckets[bucket_index].removeNode(node_id);
     }
 
-    pub fn findClosestNodes(self: *const DHTRoutingTable, target_id: NodeId, count: usize) !std.ArrayList(DHTNode) {
-        var result = std.ArrayList(DHTNode).init(self.allocator);
+    pub fn findClosestNodes(self: *const DHTRoutingTable, target_id: NodeId, count: usize) !std.array_list.Managed(DHTNode) {
+        var result = std.array_list.Managed(DHTNode).init(self.allocator);
         
         // Start from the bucket that would contain the target
         const target_bucket_index = self.getBucketIndex(target_id);
         
         // Collect nodes from the target bucket and neighboring buckets
-        var collected_nodes = std.ArrayList(DHTNode).init(self.allocator);
+        var collected_nodes = std.array_list.Managed(DHTNode).init(self.allocator);
         defer {
             // Clean up collected nodes
             for (collected_nodes.items) |*dht_node| {
@@ -498,8 +498,8 @@ pub const DHT = struct {
         std.debug.print("✅ DHT bootstrap complete. Routing table has {} nodes\n", .{self.routing_table.getTotalNodes()});
     }
 
-    pub fn findNode(self: *DHT, target_id: NodeId) !std.ArrayList(DHTNode) {
-        std.debug.print("🔍 Finding nodes closest to target: {s}\n", .{std.fmt.fmtSliceHexLower(&target_id)});
+    pub fn findNode(self: *DHT, target_id: NodeId) !std.array_list.Managed(DHTNode) {
+        std.debug.print("🔍 Finding nodes closest to target: {s}\n", .{std.fmt.bytesToHex(&target_id, .lower)});
         
         return try self.routing_table.findClosestNodes(target_id, DHT_K);
     }
@@ -525,7 +525,7 @@ pub const DHT = struct {
 
     pub fn getNodeInfo(self: *const DHT) void {
         std.debug.print("📊 DHT Node Info:\n", .{});
-        std.debug.print("   Node ID: {s}\n", .{std.fmt.fmtSliceHexLower(&self.local_node.id)});
+        std.debug.print("   Node ID: {s}\n", .{std.fmt.bytesToHex(&self.local_node.id, .lower)});
         std.debug.print("   Address: {s}:{}\n", .{ self.local_node.address, self.local_node.port });
         std.debug.print("   Total nodes in routing table: {}\n", .{self.routing_table.getTotalNodes()});
         std.debug.print("   Active buckets: {}\n", .{self.routing_table.getActiveBuckets()});
@@ -561,7 +561,7 @@ fn handleDHTPing(p2p_node: *p2p.P2PNode, peer: *p2p.PeerConnection, message: *co
     }
     
     // Send pong response
-    const pong_data = try std.fmt.allocPrint(p2p_node.allocator, "pong:{s}:{}", .{ std.fmt.fmtSliceHexLower(&dht_msg.sender_id), dht_msg.timestamp });
+    const pong_data = try std.fmt.allocPrint(p2p_node.allocator, "pong:{s}:{}", .{ std.fmt.bytesToHex(&dht_msg.sender_id, .lower), dht_msg.timestamp });
     defer p2p_node.allocator.free(pong_data);
     
     var response_msg = try DHTMessage.init(p2p_node.allocator, .pong, dht_msg.sender_id, dht_msg.sender_id, pong_data);
@@ -612,7 +612,7 @@ fn handleDHTPong(p2p_node: *p2p.P2PNode, peer: *p2p.PeerConnection, message: *co
             }
         }
         
-        std.debug.print("✅ DHT: Pong received from {s}, routing table updated\n", .{std.fmt.fmtSliceHexLower(&dht_msg.sender_id)});
+        std.debug.print("✅ DHT: Pong received from {s}, routing table updated\n", .{std.fmt.bytesToHex(&dht_msg.sender_id, .lower)});
     }
     
     // Update peer connection info
@@ -626,9 +626,9 @@ fn handleFindNode(p2p_node: *p2p.P2PNode, peer: *p2p.PeerConnection, message: *c
     var dht_msg = try DHTMessage.deserialize(p2p_node.allocator, message.payload);
     defer dht_msg.deinit(p2p_node.allocator);
     
-    std.debug.print("🔍 DHT: Find node request for target: {s}\n", .{std.fmt.fmtSliceHexLower(&dht_msg.target_id)});
+    std.debug.print("🔍 DHT: Find node request for target: {s}\n", .{std.fmt.bytesToHex(&dht_msg.target_id, .lower)});
     
-    var peers_info = std.ArrayList(u8).init(p2p_node.allocator);
+    var peers_info = std.array_list.Managed(u8).init(p2p_node.allocator);
     defer peers_info.deinit();
     
     var peer_count: u32 = 0;
@@ -671,7 +671,7 @@ fn handleFindNode(p2p_node: *p2p.P2PNode, peer: *p2p.PeerConnection, message: *c
             const node_info = try std.fmt.allocPrint(p2p_node.allocator, "{s}:{d}:{s}", .{ 
                 closest_node.address, 
                 closest_node.port,
-                std.fmt.fmtSliceHexLower(&closest_node.id)
+                std.fmt.bytesToHex(&closest_node.id, .lower)
             });
             defer p2p_node.allocator.free(node_info);
             try peers_info.appendSlice(node_info);
@@ -683,7 +683,7 @@ fn handleFindNode(p2p_node: *p2p.P2PNode, peer: *p2p.PeerConnection, message: *c
             if (peer_count > 0) {
                 try peers_info.appendSlice(",");
             }
-            const peer_info = try std.fmt.allocPrint(p2p_node.allocator, "{}:{d}", .{ existing_peer.address, existing_peer.port });
+            const peer_info = try std.fmt.allocPrint(p2p_node.allocator, "{f}:{d}", .{ existing_peer.address, existing_peer.port });
             defer p2p_node.allocator.free(peer_info);
             try peers_info.appendSlice(peer_info);
             peer_count += 1;
@@ -712,7 +712,7 @@ fn handleFindNodeResponse(p2p_node: *p2p.P2PNode, peer: *p2p.PeerConnection, mes
     var dht_msg = try DHTMessage.deserialize(p2p_node.allocator, message.payload);
     defer dht_msg.deinit(p2p_node.allocator);
     
-    std.debug.print("📋 DHT: Received find_node response from {s}\n", .{std.fmt.fmtSliceHexLower(&dht_msg.sender_id)});
+    std.debug.print("📋 DHT: Received find_node response from {s}\n", .{std.fmt.bytesToHex(&dht_msg.sender_id, .lower)});
     
     // Find DHT instance and update routing table
     if (p2p_node.user_data) |user_data| {

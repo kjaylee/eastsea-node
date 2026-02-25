@@ -85,7 +85,7 @@ pub const SecurityModule = struct {
         // - Notify relevant parties
         // For this example, we'll just log the penalty
         std.log.info("🛡️ Slashing penalty applied to attester {}: {} tokens for {s}", .{
-            std.fmt.fmtSliceHexLower(&attester_id),
+            std.fmt.bytesToHex(&attester_id, .lower),
             amount,
             penalty_reason,
         });
