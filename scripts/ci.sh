@@ -7,6 +7,25 @@ set -euo pipefail
 
 VERSION="${1:-0.1.0}"
 ZIG="${ZIG_PATH:-/opt/homebrew/opt/zig@0.14/bin/zig}"
+CI_CACHE_DIR="${ZIG_GLOBAL_CACHE_DIR:-${TMPDIR:-/tmp}/eastsea_zig_cache}"
+TIMEOUT_BIN="${TIMEOUT_BIN:-timeout}"
+HAS_TIMEOUT=0
+
+if command -v "$TIMEOUT_BIN" >/dev/null 2>&1; then
+    HAS_TIMEOUT=1
+fi
+
+if command -v "$ZIG" >/dev/null 2>&1; then
+    :
+else
+    echo "❌ Zig 실행파일을 찾을 수 없습니다: $ZIG"
+    echo "   환경변수 ZIG_PATH 를 Zig 경로로 지정해 주세요."
+    exit 1
+fi
+
+export ZIG_GLOBAL_CACHE_DIR="$CI_CACHE_DIR"
+mkdir -p "$ZIG_GLOBAL_CACHE_DIR"
+echo "📦 CI cache dir: $ZIG_GLOBAL_CACHE_DIR"
 
 echo "🔄 Eastsea Node CI Pipeline v$VERSION"
 echo "========================================"
@@ -55,7 +74,12 @@ step_test() {
 # Step 4: Integration test
 step_integration() {
     echo "▶  4/5 통합 테스트..."
-    timeout 15 $ZIG build run 2>&1 | tail -5 || true
+    if [ "$HAS_TIMEOUT" -eq 1 ]; then
+        "$TIMEOUT_BIN" 15 "$ZIG" build run 2>&1 | tail -5 || true
+    else
+        echo "⚠️  timeout 명령이 없어 15초 강제 제한 없이 통합 실행을 수행합니다."
+        "$ZIG" build run 2>&1 | tail -5 || true
+    fi
     echo "✅ 통합 실행 확인"
 }
 

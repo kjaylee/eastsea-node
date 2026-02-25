@@ -86,6 +86,17 @@
   - `REQ-100`, `REQ-101`, `REQ-103`, `REQ-104`, `REQ-111` 완료
   - `REQ_TO_TEST_UC_MAP.md`에서 단계1 전체 완료 반영
   - `테스트 결과` 기반 plan-do-see 사이클 최종 정리
+
+### 14:00
+- [agent=Codex] [시간=2026-02-25 14:00] [대상=CI 게이트] [행동=Adjust]
+- 식별된 실행 이슈:
+  - 기본 `zig test` 실행 시 `manifest_create AccessDenied`(캐시 경로 권한) 이슈 존재
+  - `timeout` 명령 미설치 환경에서 통합 단계가 경고 상태로 진행
+- 조치:
+  - `scripts/ci.sh`에 `ZIG_GLOBAL_CACHE_DIR` 기본 쓰기 경로 및 `timeout` fallback 반영
+  - `docs/REQ_TO_TEST_UC_MAP.md`의 테스트 집계 항목 표기 정합성 보정(13개 모듈 기준 통과로 명확화)
+  - `docs/TEST_RESULTS.md`에 CI 재현성 검증 블록 추가
+- 결과: `bash scripts/ci.sh 0.1.0` 문서 기반 재현성 확보(13/13 모듈 테스트 통과, 포맷 차이 수정 필요)
 ### 진행 템플릿
 - 시간: YYYY-MM-DD HH:MM
 - 에이전트: A/B
