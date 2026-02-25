@@ -81,7 +81,7 @@ pub fn build(b: *std.Build) void {
         test_run_step.dependOn(&test_run_cmd.step);
     }
 
-    // Unit tests
+    // Unit tests (main)
     const unit_tests = b.addTest(.{
         .root_source_file = b.path("src/main.zig"),
         .target = target,
@@ -90,4 +90,31 @@ pub fn build(b: *std.Build) void {
     const run_unit_tests = b.addRunArtifact(unit_tests);
     const test_step = b.step("test", "Run unit tests");
     test_step.dependOn(&run_unit_tests.step);
+
+    // REQ module unit tests
+    const module_tests = .{
+        "src/onboarding.zig",
+        "src/boot_check.zig",
+        "src/storage_init.zig",
+        "src/auth.zig",
+        "src/tls_config.zig",
+        "src/rpc_validator.zig",
+        "src/updater.zig",
+        "src/update_manager.zig",
+        "src/persistence.zig",
+        "src/rbac.zig",
+        "src/diagnostics.zig",
+        "src/monitoring.zig",
+        "src/cluster.zig",
+    };
+
+    inline for (module_tests) |src| {
+        const mod_test = b.addTest(.{
+            .root_source_file = b.path(src),
+            .target = target,
+            .optimize = optimize,
+        });
+        const run_mod_test = b.addRunArtifact(mod_test);
+        test_step.dependOn(&run_mod_test.step);
+    }
 }

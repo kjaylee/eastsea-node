@@ -10,7 +10,7 @@
 - CI: `bash scripts/ci.sh 0.1.0 test` → **13/13 모듈 통과**
 
 ### 단계별 현황
-- **단계 1**: REQ-100 ✅, REQ-101 ✅, REQ-103 ✅, REQ-104 ⏳(Docker 수동 검증), REQ-111 ✅
+- **단계 1**: REQ-100 ✅, REQ-101 ✅, REQ-103 ✅, REQ-104 ✅, REQ-111 ✅
 - **단계 2**: REQ-110 ✅, REQ-021 ✅, REQ-040 ✅, REQ-001 ✅
 - **단계 3**: REQ-102 ✅, REQ-120 ✅, REQ-010 ✅, REQ-002 ✅, REQ-121 ✅
 - **단계 4**: REQ-112 ✅, REQ-122 ✅
@@ -23,7 +23,7 @@
 | REQ-101 | P0 | 단계 1 | 완료 | UT-101-01, UT-101-02 | 완료 | TC-INSTALL-004, TC-INSTALL-003, TC-INSTALL-005 | 완료 | UC-01, UC-06 | 완료 | Phase 1 | 완료 |
 | REQ-102 | P0 | 단계 3 | 완료 | UT-102-01, UT-102-02 | 완료 | TC-INSTALL-001, TC-UPDATE-001, TC-UPDATE-002, TC-UNINSTALL-001 | 완료 | UC-04, UC-05, UC-10 | 완료 | Phase 1, Phase 5 | 완료 |
 | REQ-103 | P1 | 단계 1 | 완료 | UT-103-01 | 완료 | TC-INSTALL-006 | 완료 | UC-01, UC-02 | 완료 | Phase 1 | 완료 |
-| REQ-104 | P1 | 단계 1 | 검증중 | UT-104-01 | 완료 | TC-DOCKER-001 | 검증중 | UC-02 | 검증중 | Phase 2 | 검증중 |
+| REQ-104 | P1 | 단계 1 | 완료 | UT-104-01 | 완료 | TC-DOCKER-001 | 완료 | UC-02 | 완료 | Phase 2 | 완료 |
 | REQ-110 | P0 | 단계 2 | 완료 | UT-110-01, UT-110-02 | 완료 | TC-RUN-001, TC-RUN-005, TC-ONEFLOW-001 | 완료 | UC-01, UC-02 | 완료 | Phase 2, Phase 3 | 완료 |
 | REQ-111 | P1 | 단계 1 | 완료 | UT-111-01, UT-111-02 | 완료 | TC-INSTALL-003, TC-RUN-001, TC-RUN-004 | 완료 | UC-06 | 완료 | Phase 1, Phase 4 | 완료 |
 | REQ-112 | P2 | 단계 4 | 완료 | UT-112-01 | 완료 | TC-SEC-003, TC-ONEFLOW-002 | 완료 | UC-08, UC-01 | 완료 | Phase 2, Phase 4 | 완료 |

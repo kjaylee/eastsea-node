@@ -37,5 +37,5 @@
 
 ## 남은 작업
 - [ ] REQ-104: Docker CLI 설치 후 `docker build` 수동 검증
-- [ ] `.gitignore` 보강 (zig-out, .zig-cache)
-- [ ] `build.zig`에 신규 모듈 빌드 타겟 추가
+- [x] `.gitignore` 보강 (`dist/`, `.eastsea/` 추가)
+- [x] `build.zig`에 신규 모듈 빌드 타겟 추가 (13개 모듈 → `zig build test` 통합)

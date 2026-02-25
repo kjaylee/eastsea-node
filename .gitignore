@@ -60,3 +60,9 @@ ENV/
 # Local development
 local/
 tmp/
+
+# Distribution
+dist/
+
+# Node data
+.eastsea/
