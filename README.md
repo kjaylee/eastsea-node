@@ -2,18 +2,25 @@
 
 블록체인 노드 구현 — "Install-and-Run" 철학 기반
 
+![Eastsea Node Dashboard](docs/dashboard.png)
+
 ## 빠른 시작
 
 ```bash
-# 소스 빌드
-zig build && zig build run
+# macOS 원클릭 설치
+bash scripts/install-macos.sh install
 
-# 설치 스크립트
-bash scripts/install.sh
+# 또는 소스 빌드
+zig build && ./zig-out/bin/eastsea-production
+
+# DMG 패키지 생성
+bash scripts/create-dmg.sh 0.1.0
 
 # Docker
 docker compose up
 ```
+
+실행 후 **http://127.0.0.1:8545** 에서 대시보드가 자동으로 열립니다.
 
 ## 프로젝트 구조
 

@@ -23,6 +23,7 @@ const persistence = @import("persistence.zig");
 const rbac = @import("rbac.zig");
 const web_dashboard = @import("web_dashboard.zig");
 const upnp = @import("upnp.zig");
+const vm = @import("vm.zig");
 
 /// ~/.eastsea 경로 결정
 fn getEastseaHome(allocator: std.mem.Allocator) ![]u8 {
@@ -415,6 +416,61 @@ fn runDemo(allocator: std.mem.Allocator, config: onboarding.NodeConfig) !void {
     print("\n🔟 Blockchain validation...\n", .{});
     print("🔍 Chain valid: {}\n", .{chain.isChainValid()});
 
+    // Demo 11: 스마트 컨트랙트 VM
+    print("\n📜 Demo 11: 스마트 컨트랙트 VM...\n", .{});
+    {
+        var contract_storage = std.AutoHashMap(i64, i64).init(allocator);
+        defer contract_storage.deinit();
+
+        // ERC20 토큰 시뮬레이션 바이트코드
+        var asm_ = vm.Assembler.init(allocator);
+        defer asm_.deinit();
+
+        // total_supply = 1,000,000
+        try asm_.push(0);
+        try asm_.push(1_000_000);
+        try asm_.op(.SSTORE);
+
+        // owner = 1,000,000
+        try asm_.push(1);
+        try asm_.push(1_000_000);
+        try asm_.op(.SSTORE);
+
+        // transfer 100 to user
+        try asm_.push(1);
+        try asm_.op(.SLOAD);
+        try asm_.push(100);
+        try asm_.op(.SUB);
+        try asm_.push(1);
+        try asm_.op(.SWAP);
+        try asm_.op(.SSTORE);
+
+        try asm_.push(2);
+        try asm_.push(100);
+        try asm_.op(.SSTORE);
+
+        // LOG: Transfer event
+        try asm_.push(0xEE);
+        try asm_.push(100);
+        try asm_.op(.LOG);
+
+        try asm_.push(1);
+        try asm_.op(.SLOAD);
+        try asm_.op(.HALT);
+
+        var evm = vm.VM.init(allocator, &contract_storage, "owner", vm.VM_MAX_GAS);
+        var result = try evm.execute(asm_.build());
+        defer result.deinit();
+
+        print("   ✅ 컨트랙트 실행: success={}, gas_used={d}\n", .{ result.success, result.gas_used });
+        print("   📊 ERC20: owner={d}, user={d}, total={d}\n", .{
+            contract_storage.get(1) orelse 0,
+            contract_storage.get(2) orelse 0,
+            contract_storage.get(0) orelse 0,
+        });
+        print("   📋 이벤트: {d}개 (Transfer 100 EST)\n", .{result.logs.items.len});
+    }
+
     // Final Stats
     const poh = consensus_engine.getCurrentPohState();
     print("\n🎉 Eastsea Node Demo Completed!\n", .{});
@@ -427,6 +483,7 @@ fn runDemo(allocator: std.mem.Allocator, config: onboarding.NodeConfig) !void {
     print("  • RPC server: {}\n", .{rpc_server.isRunning()});
     print("  • Auth: ✅  RBAC: ✅  TLS: ✅\n", .{});
     print("  • Monitoring: ✅  Persistence: ✅\n", .{});
+    print("  • Smart Contract VM: ✅\n", .{});
     print("==========================================\n", .{});
 }
 
