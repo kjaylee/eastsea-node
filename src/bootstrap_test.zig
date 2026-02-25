@@ -24,9 +24,9 @@ pub fn main() !void {
         return;
     };
 
-    const bootstrap_port: ?u16 = if (args.len >= 3) 
+    const bootstrap_port: ?u16 = if (args.len >= 3)
         std.fmt.parseInt(u16, args[2], 10) catch null
-    else 
+    else
         null;
 
     std.debug.print("🚀 Starting Bootstrap Test Node\n", .{});
@@ -65,7 +65,7 @@ pub fn main() !void {
     if (bootstrap_port) |bp| {
         if (bp != local_port) { // Don't bootstrap to ourselves
             try bootstrap_client.addBootstrapNode("127.0.0.1", bp);
-            
+
             std.debug.print("🔗 Attempting to bootstrap...\n", .{});
             bootstrap_client.bootstrap() catch |err| {
                 std.debug.print("⚠️  Bootstrap failed: {}\n", .{err});
@@ -74,7 +74,7 @@ pub fn main() !void {
     } else {
         // If no bootstrap port provided, add default bootstrap nodes
         try bootstrap_client.addDefaultBootstrapNodes();
-        
+
         std.debug.print("🔗 Attempting to bootstrap with default nodes...\n", .{});
         bootstrap_client.bootstrap() catch |err| {
             std.debug.print("⚠️  Bootstrap with default nodes failed: {}\n", .{err});
@@ -96,12 +96,12 @@ pub fn main() !void {
     var iteration: u32 = 0;
     while (iteration < 30 and p2p_node.isRunning()) { // Run for 30 iterations or until node stops
         iteration += 1;
-        
+
         std.debug.print("\n--- Iteration {} ---\n", .{iteration});
-        
+
         // Show network status
         showNetworkStatus(&p2p_node, &dht_node, &bootstrap_client, &bootstrap_server);
-        
+
         // Periodically announce our node
         if (iteration % 10 == 0) {
             std.debug.print("📢 Announcing node to network...\n", .{});
@@ -109,7 +109,7 @@ pub fn main() !void {
                 std.debug.print("⚠️  Failed to announce node: {}\n", .{err});
             };
         }
-        
+
         // Periodically try to bootstrap again
         if (iteration % 15 == 0 and bootstrap_client.getBootstrapNodeCount() > 0) {
             std.debug.print("🔄 Re-attempting bootstrap...\n", .{});
@@ -117,7 +117,7 @@ pub fn main() !void {
                 std.debug.print("⚠️  Re-bootstrap failed: {}\n", .{err});
             };
         }
-        
+
         // Ping all peers
         if (iteration % 5 == 0) {
             std.debug.print("🏓 Pinging all peers...\n", .{});
@@ -125,7 +125,7 @@ pub fn main() !void {
                 std.debug.print("⚠️  Failed to ping peers: {}\n", .{err});
             };
         }
-        
+
         std.time.sleep(2_000_000_000); // 2 seconds
     }
 
@@ -155,7 +155,7 @@ fn showFinalStatus(p2p_node: *p2p.P2PNode, dht_node: *dht.DHT, bootstrap_client:
     std.debug.print("   Bootstrap nodes configured: {}\n", .{bootstrap_client.getBootstrapNodeCount()});
     std.debug.print("   Active bootstrap connections: {}\n", .{bootstrap_client.getActiveBootstrapNodes()});
     std.debug.print("   Known peers in bootstrap server: {}\n", .{bootstrap_server.getKnownPeerCount()});
-    
+
     // Show DHT node info
     dht_node.getNodeInfo();
 }
@@ -163,23 +163,23 @@ fn showFinalStatus(p2p_node: *p2p.P2PNode, dht_node: *dht.DHT, bootstrap_client:
 test "Bootstrap system integration" {
     const testing = std.testing;
     const allocator = testing.allocator;
-    
+
     // Test bootstrap client creation
     var bootstrap_client = try bootstrap.BootstrapClient.init(allocator, "127.0.0.1", 8000);
     defer bootstrap_client.deinit();
-    
+
     try testing.expect(bootstrap_client.getBootstrapNodeCount() == 0);
-    
+
     // Test adding bootstrap nodes
     try bootstrap_client.addBootstrapNode("127.0.0.1", 8001);
     try testing.expect(bootstrap_client.getBootstrapNodeCount() == 1);
-    
+
     // Test bootstrap server creation
     var bootstrap_server = try bootstrap.BootstrapServer.init(allocator, "127.0.0.1", 8000, 10);
     defer bootstrap_server.deinit();
-    
+
     try testing.expect(bootstrap_server.getKnownPeerCount() == 0);
-    
+
     // Test adding known peers
     try bootstrap_server.addKnownPeer("127.0.0.1", 8001);
     try testing.expect(bootstrap_server.getKnownPeerCount() == 1);

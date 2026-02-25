@@ -37,16 +37,13 @@ pub fn main() !void {
     defer scanner.deinit();
 
     // 스캔 설정 조정 - 범위를 현재 호스트만으로 제한
-    scanner.timeout_ms = 50;   // 매우 빠른 스캔을 위해 타임아웃 단축
-    scanner.max_threads = 5;   // 스레드 수 조정
-    scanner.start_host = scanner.base_ip[3];  // 현재 IP만
-    scanner.end_host = scanner.base_ip[3];    // 현재 IP만
+    scanner.timeout_ms = 50; // 매우 빠른 스캔을 위해 타임아웃 단축
+    scanner.max_threads = 5; // 스레드 수 조정
+    scanner.start_host = scanner.base_ip[3]; // 현재 IP만
+    scanner.end_host = scanner.base_ip[3]; // 현재 IP만
 
     print("📊 Scan configuration:\n", .{});
-    print("  - IP range: {}.{}.{}.{}-{}\n", .{
-        scanner.base_ip[0], scanner.base_ip[1], scanner.base_ip[2], 
-        scanner.start_host, scanner.end_host
-    });
+    print("  - IP range: {}.{}.{}.{}-{}\n", .{ scanner.base_ip[0], scanner.base_ip[1], scanner.base_ip[2], scanner.start_host, scanner.end_host });
     print("  - Ports: ", .{});
     for (scanner.ports, 0..) |port, i| {
         if (i > 0) print(", ", .{});
@@ -59,7 +56,7 @@ pub fn main() !void {
 
     // 스캔 실행 (간단한 수동 스캔으로 대체)
     const start_time = std.time.milliTimestamp();
-    
+
     print("🔍 Starting simplified scan...\n", .{});
     for (scanner.start_host..scanner.end_host + 1) |host| {
         const ip = [4]u8{ scanner.base_ip[0], scanner.base_ip[1], scanner.base_ip[2], @intCast(host) };
@@ -73,7 +70,7 @@ pub fn main() !void {
             }
         }
     }
-    
+
     const end_time = std.time.milliTimestamp();
 
     print("\n📈 Scan Results:\n", .{});
@@ -86,13 +83,13 @@ pub fn main() !void {
         for (scanner.getActivePeers()) |peer| {
             print("  ✅ {}\n", .{peer});
         }
-        
+
         // 포트별 필터링 예시
         print("\n📊 Peers by port:\n", .{});
         for (scanner.ports) |port| {
             var filtered = try scanner.filterByPort(port);
             defer filtered.deinit();
-            
+
             if (filtered.items.len > 0) {
                 print("  Port {}: {} peers\n", .{ port, filtered.items.len });
                 for (filtered.items) |peer| {
@@ -110,12 +107,12 @@ pub fn main() !void {
 
     print("\n🔍 Manual scan test (localhost):\n", .{});
     print("================================\n", .{});
-    
+
     // 로컬호스트에서 특정 포트 테스트
     const test_ports = [_]u16{ base_port, base_port + 1, base_port + 2 };
     for (test_ports) |port| {
         print("Testing localhost:{} ... ", .{port});
-        
+
         const result = scanner.scanSingleTarget([4]u8{ 127, 0, 0, 1 }, port) catch null;
         if (result) |scan_result| {
             print("✅ Active ({}ms)\n", .{scan_result.response_time_ms});

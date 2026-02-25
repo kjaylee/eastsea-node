@@ -91,7 +91,7 @@ fn runFullNatTraversalTest(allocator: std.mem.Allocator) !void {
     if (success) {
         print("\n🎉 Full NAT traversal test completed successfully!\n");
         nat_traversal.printStatus();
-        
+
         // 추가 테스트: 포트 매핑 정보
         try testPortMapping(&nat_traversal);
     } else {
@@ -117,7 +117,7 @@ fn runStunServerTest(allocator: std.mem.Allocator) !void {
         defer stun_client.deinit();
 
         const start_time = std.time.milliTimestamp();
-        
+
         const public_address = stun_client.getPublicAddress() catch |err| {
             print("❌ STUN request failed: {}\n", .{err});
             continue;
@@ -184,7 +184,7 @@ fn analyzeNatBehavior(local_addr: net.Address, public_addr: net.Address) !void {
         print("🛡️ Network Type: Behind NAT/Firewall\n");
         print("   - Your device is behind a NAT device\n");
         print("   - NAT traversal techniques may be needed\n");
-        
+
         // 로컬 IP 주소 타입 분석
         try analyzeLocalIpType(local_addr);
     }
@@ -212,13 +212,13 @@ fn analyzeLocalIpType(local_addr: net.Address) !void {
     const is_private = blk: {
         // 10.0.0.0/8 (10.0.0.0 - 10.255.255.255)
         if ((ip_u32 & 0xFF000000) == 0x0A000000) break :blk true;
-        
+
         // 172.16.0.0/12 (172.16.0.0 - 172.31.255.255)
         if ((ip_u32 & 0xFFF00000) == 0xAC100000) break :blk true;
-        
+
         // 192.168.0.0/16 (192.168.0.0 - 192.168.255.255)
         if ((ip_u32 & 0xFFFF0000) == 0xC0A80000) break :blk true;
-        
+
         break :blk false;
     };
 
@@ -239,7 +239,7 @@ fn testConnectivity(allocator: std.mem.Allocator, public_addr: net.Address) !voi
     // 간단한 연결성 테스트 (예: HTTP 요청)
     _ = allocator;
     _ = public_addr;
-    
+
     print("📊 Connectivity test would be implemented here\n");
     print("   - Test inbound connections\n");
     print("   - Test outbound connections\n");
@@ -274,12 +274,12 @@ fn runPerformanceBenchmark(allocator: std.mem.Allocator) !void {
         print("Request {}/{}... ", .{ i + 1, iterations });
 
         const start_time = std.time.milliTimestamp();
-        
+
         var nat_traversal = NatTraversal.init(allocator);
         defer nat_traversal.deinit();
 
         const success = nat_traversal.discoverPublicAddress() catch false;
-        
+
         const end_time = std.time.milliTimestamp();
         const duration = end_time - start_time;
 
@@ -300,7 +300,7 @@ fn runPerformanceBenchmark(allocator: std.mem.Allocator) !void {
     print("Total requests: {}\n", .{iterations});
     print("Successful: {}\n", .{successful_requests});
     print("Failed: {}\n", .{iterations - successful_requests});
-    
+
     if (successful_requests > 0) {
         const avg_time = @divTrunc(total_time, successful_requests);
         print("Average response time: {}ms\n", .{avg_time});

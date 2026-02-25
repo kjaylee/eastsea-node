@@ -6,7 +6,7 @@ const p2p = @import("network/p2p.zig");
 pub fn main() !void {
     print("🚀 P2P Network Test Starting...\n", .{});
     print("==========================================\n", .{});
-    
+
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
     defer _ = gpa.deinit();
     const allocator = gpa.allocator();
@@ -31,14 +31,14 @@ pub fn main() !void {
     // Initialize network node
     var node = network.Node.init(allocator, "127.0.0.1", port);
     defer node.deinit();
-    
+
     try node.start();
 
     // Connect to another peer if specified
     if (connect_to_port) |target_port| {
         print("🤝 Attempting to connect to peer on port {}\n", .{target_port});
         std.time.sleep(1000000000); // Wait 1 second for the other node to start
-        
+
         node.connectToPeer("127.0.0.1", target_port) catch |err| {
             print("❌ Failed to connect to peer: {}\n", .{err});
         };
@@ -86,7 +86,7 @@ pub fn main() !void {
         std.time.sleep(1000000000); // 1 second
         i += 1;
         print("⏱️  {} seconds remaining... (peers: {})\n", .{ 10 - i, node.getPeerCount() });
-        
+
         // Ping peers every 3 seconds
         if (i % 3 == 0) {
             node.pingPeers() catch |err| {

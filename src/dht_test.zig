@@ -46,7 +46,7 @@ pub fn main() !void {
     // If bootstrap port is provided, connect to it
     if (bootstrap_port) |bp| {
         std.time.sleep(1000000000); // Wait 1 second for node to fully start
-        
+
         std.debug.print("🔗 Attempting to connect to bootstrap node at port {}\n", .{bp});
         test_node.connectToPeer("127.0.0.1", bp) catch |err| {
             std.debug.print("⚠️  Could not connect to bootstrap node: {}\n", .{err});
@@ -59,26 +59,26 @@ pub fn main() !void {
 
     // Run the node for a while to demonstrate DHT functionality
     std.debug.print("🏃 Running DHT test for 30 seconds...\n", .{});
-    
+
     var elapsed_time: u32 = 0;
     const test_duration: u32 = 30; // 30 seconds
-    
+
     while (elapsed_time < test_duration) {
         std.time.sleep(1000000000); // Sleep for 1 second
         elapsed_time += 1;
-        
+
         // Every 5 seconds, show status and ping peers
         if (elapsed_time % 5 == 0) {
             std.debug.print("\n📊 Status update ({}s elapsed):\n", .{elapsed_time});
             std.debug.print("   Connected peers: {}\n", .{test_node.getPeerCount()});
-            
+
             if (test_node.dht) |dht_instance| {
                 dht_instance.getNodeInfo();
             }
-            
+
             // Ping all peers
             try test_node.pingPeers();
-            
+
             // Try to discover more peers
             if (elapsed_time % 10 == 0) {
                 std.debug.print("🔍 Performing periodic peer discovery...\n", .{});
@@ -90,7 +90,7 @@ pub fn main() !void {
     std.debug.print("\n✅ DHT test completed successfully!\n", .{});
     std.debug.print("📊 Final statistics:\n", .{});
     std.debug.print("   Connected peers: {}\n", .{test_node.getPeerCount()});
-    
+
     if (test_node.dht) |dht_instance| {
         dht_instance.getNodeInfo();
     }

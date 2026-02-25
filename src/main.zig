@@ -12,7 +12,7 @@ const wallet = @import("cli/wallet.zig");
 pub fn main() !void {
     print("🚀 Eastsea Clone in Zig Starting...\n", .{});
     print("==========================================\n", .{});
-    
+
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
     defer _ = gpa.deinit();
     const allocator = gpa.allocator();
@@ -28,7 +28,7 @@ pub fn main() !void {
     // Initialize network node
     var node = network.Node.init(allocator, "127.0.0.1", 8000);
     defer node.deinit();
-    
+
     try node.start();
     try node.discoverPeers();
 
@@ -53,16 +53,16 @@ pub fn main() !void {
     print("\n1️⃣  Creating wallet accounts...\n", .{});
     const addr1 = try cli_wallet.wallet.createAccount();
     const addr2 = try cli_wallet.wallet.createAccount();
-    
+
     // Set initial balances for demo
     try cli_wallet.wallet.setBalance(addr1, 1000);
     try cli_wallet.wallet.setBalance(addr2, 500);
-    
+
     cli_wallet.wallet.listAccounts();
 
     // Demo 2: Process some transactions with PoH
     print("\n2️⃣  Processing transactions with Proof of History...\n", .{});
-    
+
     const tx1 = blockchain.Transaction{
         .from = addr1,
         .to = addr2,
@@ -73,7 +73,7 @@ pub fn main() !void {
     // Process transaction through consensus
     const tx1_data = try std.fmt.allocPrint(allocator, "{s}{s}{d}{d}", .{ tx1.from, tx1.to, tx1.amount, tx1.timestamp });
     defer allocator.free(tx1_data);
-    
+
     try consensus_engine.processTransaction(tx1_data);
     try chain.addTransaction(tx1);
 
@@ -81,11 +81,11 @@ pub fn main() !void {
 
     // Demo 3: Mine blocks with PoH
     print("\n3️⃣  Mining blocks with consensus...\n", .{});
-    
+
     // Process a few slots
     try consensus_engine.processSlot();
     try consensus_engine.processSlot();
-    
+
     // Mine the block
     try chain.mineBlock();
     print("⛏️  New block mined! Height: {}\n", .{chain.getHeight()});
@@ -95,13 +95,13 @@ pub fn main() !void {
 
     // Demo 4: Network operations
     print("\n4️⃣  Network operations...\n", .{});
-    
+
     const ping_msg = network.Message.init(.ping, "ping");
     try node.broadcastMessage(ping_msg);
 
     // Demo 5: RPC operations
     print("\n5️⃣  RPC API demonstrations...\n", .{});
-    
+
     const height_response = try rpc_server.processRequest("getBlockHeight", "null");
     defer allocator.free(height_response);
     print("📡 RPC getBlockHeight: {s}\n", .{height_response});
@@ -112,10 +112,10 @@ pub fn main() !void {
 
     // Demo 6: Wallet operations
     print("\n6️⃣  Wallet operations...\n", .{});
-    
+
     const transfer_tx = try cli_wallet.wallet.transfer(addr1, addr2, 50);
     print("💰 Wallet transfer completed\n", .{});
-    
+
     // Sign the transaction
     const signature = try cli_wallet.wallet.signTransaction(transfer_tx);
     defer allocator.free(signature);
@@ -125,19 +125,19 @@ pub fn main() !void {
 
     // Demo 7: Blockchain validation
     print("\n7️⃣  Blockchain validation...\n", .{});
-    
+
     const is_valid = chain.isChainValid();
     print("🔍 Blockchain is valid: {}\n", .{is_valid});
 
     // Demo 8: Merkle tree operations
     print("\n8️⃣  Merkle tree operations...\n", .{});
-    
+
     var merkle = crypto.MerkleTree.init(allocator);
     defer merkle.deinit();
-    
+
     const transactions = [_][]const u8{ "tx1", "tx2", "tx3", "tx4" };
     try merkle.buildTree(&transactions);
-    
+
     if (merkle.getRoot()) |root| {
         print("🌳 Merkle root: {s}\n", .{root[0..16]});
     }
@@ -150,16 +150,16 @@ pub fn main() !void {
     print("  • Wallet accounts: {}\n", .{cli_wallet.wallet.getAccountCount()});
     print("  • PoH ticks processed: {}\n", .{poh_state.tick_count});
     print("  • RPC server running: {}\n", .{rpc_server.isRunning()});
-    
+
     // Cleanup with proper error handling
     print("\n🧹 Shutting down components...\n", .{});
-    
+
     rpc_server.stop();
     print("✅ RPC server stopped\n", .{});
-    
-    node.stop(); 
+
+    node.stop();
     print("✅ Network node stopped\n", .{});
-    
+
     print("✅ Cleanup completed successfully\n", .{});
 }
 

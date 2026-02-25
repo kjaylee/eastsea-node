@@ -39,12 +39,12 @@ pub fn main() !void {
             print("❌ Invalid bootstrap address format: {s}\n", .{args[2]});
             return;
         };
-        
+
         const bootstrap_port = std.fmt.parseInt(u16, port_str, 10) catch {
             print("❌ Invalid bootstrap port: {s}\n", .{port_str});
             return;
         };
-        
+
         bootstrap_peer = net.Address.parseIp4(host, bootstrap_port) catch {
             print("❌ Failed to parse bootstrap address: {s}:{d}\n", .{ host, bootstrap_port });
             return;
@@ -80,21 +80,21 @@ pub fn main() !void {
 
     // 신호 처리를 위한 설정
     var should_exit = false;
-    
+
     // 테스트 시간 제한 (30초)
     const test_duration_seconds = 30;
     const start_time = std.time.timestamp();
-    
+
     // 메인 루프
     var iteration: u32 = 0;
     while (!should_exit) {
         iteration += 1;
-        
+
         // 10초마다 상태 출력 (빈도 감소)
         if (iteration % 10 == 0) {
             auto_discovery.printStatus();
         }
-        
+
         // 시간 제한 확인
         const current_time = std.time.timestamp();
         if (current_time - start_time >= test_duration_seconds) {
@@ -102,13 +102,13 @@ pub fn main() !void {
             should_exit = true;
             break;
         }
-        
+
         // 사용자 입력 확인 (non-blocking)
         if (checkForExit()) {
             should_exit = true;
             break;
         }
-        
+
         // 1초 대기
         std.time.sleep(1 * std.time.ns_per_s);
     }
@@ -126,31 +126,31 @@ fn checkForExit() bool {
 // 테스트 시나리오 실행
 fn runTestScenarios(auto_discovery: *AutoDiscovery) !void {
     print("🧪 Running test scenarios...\n", .{});
-    
+
     // 시나리오 1: 로컬 피어 추가
     const local_peer = try net.Address.parseIp4("127.0.0.1", 8002);
     try auto_discovery.connectToPeer(local_peer);
-    
+
     // 시나리오 2: 상태 확인
     std.time.sleep(2 * std.time.ns_per_s);
     auto_discovery.printStatus();
-    
+
     // 시나리오 3: 여러 피어 시뮬레이션
     const test_peers = [_]net.Address{
         try net.Address.parseIp4("127.0.0.1", 8003),
         try net.Address.parseIp4("127.0.0.1", 8004),
         try net.Address.parseIp4("127.0.0.1", 8005),
     };
-    
+
     for (test_peers) |peer| {
         try auto_discovery.connectToPeer(peer);
         std.time.sleep(500 * std.time.ns_per_ms); // 0.5초 간격
     }
-    
+
     // 최종 상태 출력
     std.time.sleep(3 * std.time.ns_per_s);
     auto_discovery.printStatus();
-    
+
     print("✅ Test scenarios completed\n", .{});
 }
 
@@ -158,15 +158,15 @@ fn runTestScenarios(auto_discovery: *AutoDiscovery) !void {
 fn runDemoMode(auto_discovery: *AutoDiscovery) !void {
     print("🎮 Demo mode started\n", .{});
     print("This will simulate network activity...\n\n", .{});
-    
+
     var demo_iteration: u32 = 0;
     while (demo_iteration < 30) { // 30초간 데모 실행
         demo_iteration += 1;
-        
+
         // 5초마다 상태 출력
         if (demo_iteration % 5 == 0) {
             auto_discovery.printStatus();
-            
+
             // 가상 피어 추가 (데모용)
             if (demo_iteration == 10) {
                 print("🎭 Simulating peer discovery...\n", .{});
@@ -174,33 +174,33 @@ fn runDemoMode(auto_discovery: *AutoDiscovery) !void {
                 try auto_discovery.connectToPeer(demo_peer);
             }
         }
-        
+
         std.time.sleep(1 * std.time.ns_per_s);
     }
-    
+
     print("🎮 Demo mode completed\n", .{});
 }
 
 // 성능 테스트 모드
 fn runPerformanceTest(auto_discovery: *AutoDiscovery) !void {
     print("⚡ Performance test started\n", .{});
-    
+
     const start_time = std.time.milliTimestamp();
-    
+
     // 대량 피어 연결 시뮬레이션
     for (0..100) |i| {
         const port_offset: u16 = @intCast(i);
         const test_peer = try net.Address.parseIp4("127.0.0.1", 9000 + port_offset);
         try auto_discovery.connectToPeer(test_peer);
-        
+
         if (i % 10 == 0) {
             print("📊 Added {d} peers\n", .{i + 1});
         }
     }
-    
+
     const end_time = std.time.milliTimestamp();
     const duration = end_time - start_time;
-    
+
     print("⚡ Performance test completed in {d}ms\n", .{duration});
     auto_discovery.printStatus();
 }

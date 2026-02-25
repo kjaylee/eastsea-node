@@ -4,7 +4,6 @@ const fs = std.fs;
 /// REQ-102: 자동 업데이트/제거 지원
 /// UT-102-01: updater.checkVersion — 버전 비교
 /// UT-102-02: updater.prepareRollback — 롤백 준비
-
 pub const Version = struct {
     major: u16,
     minor: u16,

@@ -5,7 +5,6 @@ const fs = std.fs;
 /// UT-010-01: saveState — 상태 영속화
 /// UT-010-02: loadState — 상태 복원
 /// UT-010-03: cleanState — 상태 정리/제거
-
 pub const NodeState = struct {
     block_height: u64 = 0,
     peer_count: u32 = 0,

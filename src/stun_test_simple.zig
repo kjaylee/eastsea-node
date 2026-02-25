@@ -104,7 +104,7 @@ fn runStunServerTest(allocator: std.mem.Allocator) !void {
         defer stun_client.deinit();
 
         const start_time = std.time.milliTimestamp();
-        
+
         const public_address = stun_client.getPublicAddress() catch |err| {
             print("STUN request failed: {}\n", .{err});
             continue;

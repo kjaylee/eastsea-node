@@ -74,12 +74,20 @@ step_test() {
 # Step 4: Integration test
 step_integration() {
     echo "▶  4/5 통합 테스트..."
+    local integration_rc=0
+    local integration_log="dist/ci_integration.log"
+
     if [ "$HAS_TIMEOUT" -eq 1 ]; then
-        "$TIMEOUT_BIN" 15 "$ZIG" build run 2>&1 | tail -5 || true
+        "$TIMEOUT_BIN" 15 "$ZIG" build run >"$integration_log" 2>&1 || integration_rc=$?
     else
         echo "⚠️  timeout 명령이 없어 15초 강제 제한 없이 통합 실행을 수행합니다."
-        "$ZIG" build run 2>&1 | tail -5 || true
+        "$ZIG" build run >"$integration_log" 2>&1 || integration_rc=$?
     fi
+
+    if [ "$integration_rc" -ne 0 ]; then
+        echo "⚠️  통합 실행 종료(코드 ${integration_rc}) - 로그만 확인하고 진행을 계속합니다."
+    fi
+    tail -n 5 "$integration_log" || true
     echo "✅ 통합 실행 확인"
 }
 

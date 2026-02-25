@@ -1,0 +1,603 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Eastsea Node</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-primary: #0a0e1a;
+            --bg-secondary: #111827;
+            --bg-card: #1a2236;
+            --bg-card-hover: #1f2a42;
+            --accent: #3b82f6;
+            --accent-glow: rgba(59,130,246,0.3);
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --text-primary: #f1f5f9;
+            --text-secondary: #94a3b8;
+            --text-muted: #64748b;
+            --border: #1e293b;
+            --radius: 12px;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Inter', -apple-system, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* Background animation */
+        body::before {
+            content: '';
+            position: fixed;
+            top: -50%; left: -50%;
+            width: 200%; height: 200%;
+            background: radial-gradient(ellipse at 30% 20%, rgba(59,130,246,0.08) 0%, transparent 50%),
+                        radial-gradient(ellipse at 70% 80%, rgba(16,185,129,0.06) 0%, transparent 50%);
+            animation: bgShift 20s ease infinite alternate;
+            z-index: -1;
+        }
+        @keyframes bgShift {
+            0% { transform: translate(0, 0); }
+            100% { transform: translate(-5%, -3%); }
+        }
+
+        /* Header */
+        .header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 20px 32px;
+            border-bottom: 1px solid var(--border);
+            backdrop-filter: blur(20px);
+            background: rgba(10,14,26,0.8);
+            position: sticky; top: 0; z-index: 100;
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
+
+        .logo {
+            width: 40px; height: 40px;
+            background: linear-gradient(135deg, var(--accent), #8b5cf6);
+            border-radius: 10px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 20px;
+            box-shadow: 0 4px 15px var(--accent-glow);
+        }
+
+        .app-title {
+            font-size: 20px;
+            font-weight: 700;
+            background: linear-gradient(135deg, #f1f5f9, #94a3b8);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .version-badge {
+            font-size: 11px;
+            padding: 3px 8px;
+            background: rgba(59,130,246,0.15);
+            color: var(--accent);
+            border-radius: 6px;
+            font-weight: 600;
+        }
+
+        .status-indicator {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: 500;
+        }
+
+        .status-indicator.online {
+            background: rgba(16,185,129,0.1);
+            color: var(--success);
+        }
+
+        .status-dot {
+            width: 8px; height: 8px;
+            border-radius: 50%;
+            background: var(--success);
+            animation: pulse 2s ease infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(16,185,129,0.4); }
+            50% { box-shadow: 0 0 0 6px rgba(16,185,129,0); }
+        }
+
+        /* Main Layout */
+        .main {
+            max-width: 1280px;
+            margin: 0 auto;
+            padding: 28px 32px;
+        }
+
+        /* Stats Row */
+        .stats-row {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+
+        .stat-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 20px;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .stat-card::after {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, var(--accent), transparent);
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        .stat-card:hover {
+            background: var(--bg-card-hover);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.3);
+        }
+
+        .stat-card:hover::after { opacity: 1; }
+
+        .stat-label {
+            font-size: 12px;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 8px;
+        }
+
+        .stat-value {
+            font-size: 28px;
+            font-weight: 700;
+            line-height: 1;
+            margin-bottom: 4px;
+        }
+
+        .stat-sub {
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+
+        .stat-icon {
+            position: absolute;
+            top: 16px; right: 16px;
+            font-size: 24px;
+            opacity: 0.6;
+        }
+
+        /* Grid */
+        .grid-2 {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+
+        /* Panel */
+        .panel {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            overflow: hidden;
+        }
+
+        .panel-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 16px 20px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .panel-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .panel-body { padding: 16px 20px; }
+
+        /* Activity Log */
+        .log-entry {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            padding: 10px 0;
+            border-bottom: 1px solid rgba(30,41,59,0.5);
+            animation: fadeIn 0.5s ease;
+        }
+
+        .log-entry:last-child { border: none; }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateX(-10px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+
+        .log-icon {
+            width: 28px; height: 28px;
+            border-radius: 6px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 13px;
+            flex-shrink: 0;
+        }
+
+        .log-icon.block { background: rgba(59,130,246,0.15); }
+        .log-icon.tx { background: rgba(16,185,129,0.15); }
+        .log-icon.net { background: rgba(245,158,11,0.15); }
+        .log-icon.sec { background: rgba(168,85,247,0.15); }
+
+        .log-text {
+            font-size: 13px;
+            color: var(--text-secondary);
+            line-height: 1.4;
+        }
+
+        .log-text strong {
+            color: var(--text-primary);
+            font-weight: 500;
+        }
+
+        .log-time {
+            font-size: 11px;
+            color: var(--text-muted);
+            margin-top: 2px;
+        }
+
+        /* Security Panel */
+        .security-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 10px 0;
+            border-bottom: 1px solid rgba(30,41,59,0.5);
+        }
+
+        .security-item:last-child { border: none; }
+
+        .security-label {
+            font-size: 13px;
+            color: var(--text-secondary);
+        }
+
+        .badge {
+            font-size: 11px;
+            padding: 3px 10px;
+            border-radius: 10px;
+            font-weight: 600;
+        }
+
+        .badge.ok { background: rgba(16,185,129,0.15); color: var(--success); }
+        .badge.warn { background: rgba(245,158,11,0.15); color: var(--warning); }
+        .badge.off { background: rgba(100,116,139,0.15); color: var(--text-muted); }
+
+        /* Peers */
+        .peer-item {
+            display: flex; align-items: center; gap: 10px;
+            padding: 8px 0;
+        }
+
+        .peer-dot {
+            width: 6px; height: 6px;
+            border-radius: 50%;
+        }
+
+        .peer-dot.active { background: var(--success); }
+        .peer-dot.inactive { background: var(--text-muted); }
+
+        .peer-addr {
+            font-size: 13px;
+            font-family: 'SF Mono', 'Fira Code', monospace;
+            color: var(--text-secondary);
+        }
+
+        /* Chart area */
+        .chart-container {
+            height: 160px;
+            display: flex;
+            align-items: flex-end;
+            gap: 4px;
+            padding: 12px 0;
+        }
+
+        .chart-bar {
+            flex: 1;
+            background: linear-gradient(to top, var(--accent), rgba(59,130,246,0.3));
+            border-radius: 3px 3px 0 0;
+            min-height: 4px;
+            transition: height 0.6s ease;
+        }
+
+        /* Footer */
+        .footer {
+            text-align: center;
+            padding: 24px;
+            color: var(--text-muted);
+            font-size: 12px;
+        }
+
+        @media (max-width: 768px) {
+            .stats-row { grid-template-columns: repeat(2, 1fr); }
+            .grid-2 { grid-template-columns: 1fr; }
+            .main { padding: 16px; }
+        }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <div class="header-left">
+            <div class="logo">🌊</div>
+            <span class="app-title">Eastsea Node</span>
+            <span class="version-badge">v0.1.0</span>
+        </div>
+        <div class="status-indicator online">
+            <div class="status-dot"></div>
+            <span id="statusText">Running</span>
+        </div>
+    </header>
+
+    <main class="main">
+        <!-- Stats -->
+        <div class="stats-row">
+            <div class="stat-card">
+                <div class="stat-label">Block Height</div>
+                <div class="stat-value" id="blockHeight">0</div>
+                <div class="stat-sub" id="blockSub">Initializing...</div>
+                <div class="stat-icon">⛓️</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Peers</div>
+                <div class="stat-value" id="peerCount">0</div>
+                <div class="stat-sub" id="peerSub">Discovering...</div>
+                <div class="stat-icon">🌐</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Transactions</div>
+                <div class="stat-value" id="txCount">0</div>
+                <div class="stat-sub">Processed</div>
+                <div class="stat-icon">💸</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Uptime</div>
+                <div class="stat-value" id="uptime">0s</div>
+                <div class="stat-sub" id="uptimeSub">Just started</div>
+                <div class="stat-icon">⏱️</div>
+            </div>
+        </div>
+
+        <div class="grid-2">
+            <!-- Activity Log -->
+            <div class="panel">
+                <div class="panel-header">
+                    <span class="panel-title">Activity Log</span>
+                    <span style="font-size:12px;color:var(--text-muted)" id="logCount">0 events</span>
+                </div>
+                <div class="panel-body" id="activityLog" style="max-height:360px;overflow-y:auto">
+                </div>
+            </div>
+
+            <!-- Right Column -->
+            <div style="display:flex;flex-direction:column;gap:16px">
+                <!-- Security -->
+                <div class="panel">
+                    <div class="panel-header">
+                        <span class="panel-title">🔐 Security</span>
+                    </div>
+                    <div class="panel-body">
+                        <div class="security-item">
+                            <span class="security-label">Auth Token</span>
+                            <span class="badge ok" id="authBadge">Active</span>
+                        </div>
+                        <div class="security-item">
+                            <span class="security-label">RBAC</span>
+                            <span class="badge ok">Enabled</span>
+                        </div>
+                        <div class="security-item">
+                            <span class="security-label">TLS</span>
+                            <span class="badge off" id="tlsBadge">Disabled</span>
+                        </div>
+                        <div class="security-item">
+                            <span class="security-label">Persistence</span>
+                            <span class="badge ok">Active</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Peers -->
+                <div class="panel">
+                    <div class="panel-header">
+                        <span class="panel-title">🌐 Peers</span>
+                    </div>
+                    <div class="panel-body" id="peerList">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Block Chart -->
+        <div class="panel" style="margin-bottom:24px">
+            <div class="panel-header">
+                <span class="panel-title">📊 Block Production</span>
+                <span style="font-size:12px;color:var(--text-muted)">Last 30 blocks</span>
+            </div>
+            <div class="panel-body">
+                <div class="chart-container" id="blockChart"></div>
+            </div>
+        </div>
+    </main>
+
+    <footer class="footer">
+        Eastsea Node v0.1.0 · Install-and-Run Blockchain · Port 8545
+    </footer>
+
+    <script>
+        // Simulated node state
+        const state = {
+            blockHeight: 1,
+            peers: [],
+            txCount: 0,
+            startTime: Date.now(),
+            events: [],
+            blockTimes: [],
+        };
+
+        const peerPool = [
+            '127.0.0.1:8002', '127.0.0.1:8003', '192.168.1.10:8000',
+            '10.0.0.5:8000', '172.16.0.2:8000', '192.168.0.100:8000',
+        ];
+
+        function formatUptime(ms) {
+            const s = Math.floor(ms / 1000);
+            if (s < 60) return s + 's';
+            if (s < 3600) return Math.floor(s/60) + 'm ' + (s%60) + 's';
+            return Math.floor(s/3600) + 'h ' + Math.floor((s%3600)/60) + 'm';
+        }
+
+        function addEvent(icon, iconClass, text) {
+            const now = new Date().toLocaleTimeString();
+            state.events.unshift({ icon, iconClass, text, time: now });
+            if (state.events.length > 50) state.events.pop();
+            renderLog();
+        }
+
+        function renderLog() {
+            const el = document.getElementById('activityLog');
+            el.innerHTML = state.events.map(e => `
+                <div class="log-entry">
+                    <div class="log-icon ${e.iconClass}">${e.icon}</div>
+                    <div>
+                        <div class="log-text">${e.text}</div>
+                        <div class="log-time">${e.time}</div>
+                    </div>
+                </div>
+            `).join('');
+            document.getElementById('logCount').textContent = state.events.length + ' events';
+        }
+
+        function renderPeers() {
+            const el = document.getElementById('peerList');
+            if (state.peers.length === 0) {
+                el.innerHTML = '<div style="font-size:13px;color:var(--text-muted);padding:8px 0">Discovering peers...</div>';
+                return;
+            }
+            el.innerHTML = state.peers.map(p => `
+                <div class="peer-item">
+                    <div class="peer-dot active"></div>
+                    <span class="peer-addr">${p}</span>
+                </div>
+            `).join('');
+        }
+
+        function renderChart() {
+            const el = document.getElementById('blockChart');
+            const times = state.blockTimes.slice(-30);
+            if (times.length < 2) {
+                el.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;width:100%;height:100%;color:var(--text-muted);font-size:13px">Waiting for blocks...</div>';
+                return;
+            }
+            const maxTime = Math.max(...times, 1);
+            el.innerHTML = times.map(t => {
+                const h = Math.max(4, (t / maxTime) * 140);
+                return `<div class="chart-bar" style="height:${h}px"></div>`;
+            }).join('');
+        }
+
+        function updateStats() {
+            const up = Date.now() - state.startTime;
+            document.getElementById('blockHeight').textContent = state.blockHeight.toLocaleString();
+            document.getElementById('peerCount').textContent = state.peers.length;
+            document.getElementById('txCount').textContent = state.txCount.toLocaleString();
+            document.getElementById('uptime').textContent = formatUptime(up);
+            document.getElementById('blockSub').textContent = state.blockHeight === 1 ? 'Genesis only' : `+${state.blockHeight - 1} mined`;
+            document.getElementById('peerSub').textContent = state.peers.length === 0 ? 'Discovering...' : `${state.peers.length} connected`;
+            document.getElementById('uptimeSub').textContent = up < 60000 ? 'Just started' : 'Stable';
+        }
+
+        // Simulate node behavior
+        // Phase 1: Boot sequence
+        setTimeout(() => addEvent('📋', 'sec', '<strong>Onboarding</strong> — Config loaded: node_port=8001, rpc_port=8545'), 500);
+        setTimeout(() => addEvent('🔍', 'net', '<strong>Boot Diagnostic</strong> — Port scan passed, privileges OK'), 1200);
+        setTimeout(() => addEvent('📦', 'block', '<strong>Storage</strong> — Schema v1 initialized, data path verified'), 1800);
+        setTimeout(() => addEvent('🔐', 'sec', '<strong>Security</strong> — Auth token issued (scope=admin, TTL=24h)'), 2400);
+        setTimeout(() => addEvent('✅', 'block', '<strong>Node Started</strong> — Eastsea v0.1.0 running on port 8001'), 3000);
+
+        // Phase 2: Peer discovery
+        setTimeout(() => {
+            const p = peerPool[0];
+            state.peers.push(p);
+            addEvent('🤝', 'net', `<strong>Peer Connected</strong> — ${p}`);
+            renderPeers();
+        }, 4000);
+
+        setTimeout(() => {
+            const p = peerPool[1];
+            state.peers.push(p);
+            addEvent('🤝', 'net', `<strong>Peer Connected</strong> — ${p}`);
+            renderPeers();
+        }, 5500);
+
+        // Phase 3: Continuous operation
+        let mineInterval;
+        setTimeout(() => {
+            mineInterval = setInterval(() => {
+                state.blockHeight++;
+                const txInBlock = Math.floor(Math.random() * 5) + 1;
+                state.txCount += txInBlock;
+                const blockTime = 300 + Math.random() * 200;
+                state.blockTimes.push(blockTime);
+
+                addEvent('⛏️', 'block', `<strong>Block #${state.blockHeight}</strong> mined — ${txInBlock} tx, ${Math.round(blockTime)}ms`);
+                renderChart();
+
+                // Random peer join
+                if (Math.random() > 0.7 && state.peers.length < peerPool.length) {
+                    const available = peerPool.filter(p => !state.peers.includes(p));
+                    if (available.length > 0) {
+                        const p = available[Math.floor(Math.random() * available.length)];
+                        state.peers.push(p);
+                        addEvent('🤝', 'net', `<strong>Peer Connected</strong> — ${p}`);
+                        renderPeers();
+                    }
+                }
+
+                // Random transaction
+                if (Math.random() > 0.5) {
+                    const amt = Math.floor(Math.random() * 500) + 10;
+                    addEvent('💸', 'tx', `<strong>Transfer</strong> — ${amt} EST sent`);
+                }
+            }, 2500);
+        }, 6000);
+
+        // Stats updater
+        setInterval(updateStats, 500);
+        updateStats();
+        renderPeers();
+        renderChart();
+    </script>
+</body>
+</html>

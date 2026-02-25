@@ -4,7 +4,6 @@ const crypto = std.crypto;
 /// REQ-001: API 인증 토큰
 /// UT-001-01: issueToken — 만료/scope 적용
 /// UT-001-02: validateToken — 만료·위조·타입 불일치
-
 pub const TokenError = error{ Expired, Invalid, Unauthorized };
 
 pub const Token = struct {

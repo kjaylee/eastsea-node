@@ -3,7 +3,6 @@ const fs = std.fs;
 
 /// REQ-110: 첫 실행 시 내장 기본값 기반 영속성 저장소 초기화
 /// 스키마 자동 생성, 마이그레이션 관리
-
 pub const StorageError = error{
     InitFailed,
     MigrationFailed,

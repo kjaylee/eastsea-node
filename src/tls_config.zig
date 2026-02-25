@@ -3,7 +3,6 @@ const std = @import("std");
 /// REQ-040: TLS/비밀 관리
 /// UT-040-01: validateConfig — 비밀 누출 없이 설정 직렬화
 /// UT-040-02: rotate — 비밀 키 회전, 로그 마스킹
-
 pub const TlsConfig = struct {
     enabled: bool = false,
     cert_path: []const u8 = "",

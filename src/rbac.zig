@@ -2,7 +2,6 @@ const std = @import("std");
 
 /// REQ-002: 역할 기반 권한 (RBAC)
 /// UT-002-01: authorize — 역할별 접근 제어
-
 pub const Role = enum { admin, operator, viewer, guest };
 
 pub const Permission = struct {

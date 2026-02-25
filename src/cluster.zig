@@ -2,7 +2,6 @@ const std = @import("std");
 
 /// REQ-122: 노드 클러스터 관리
 /// UT-122-01: clusterInfo — 클러스터 상태 조회
-
 pub const ClusterNode = struct {
     id: [32]u8,
     address: []const u8,

@@ -5,23 +5,23 @@ const eas = @import("eas/attestation.zig");
 pub fn main() !void {
     print("🚀 Eastsea Attestation Service (EAS) Test\n", .{});
     print("==========================================\n", .{});
-    
+
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
     defer _ = gpa.deinit();
     const allocator = gpa.allocator();
-    
+
     // Get command line arguments
     const args = try std.process.argsAlloc(allocator);
     defer std.process.argsFree(allocator, args);
-    
+
     if (args.len < 2) {
         printUsage(args[0]);
         return;
     }
-    
+
     const test_type = args[1];
     print("Test type: {s}\n\n", .{test_type});
-    
+
     if (std.mem.eql(u8, test_type, "basic")) {
         try runBasicEASTest(allocator);
     } else if (std.mem.eql(u8, test_type, "schema")) {
@@ -41,7 +41,7 @@ pub fn main() !void {
         printUsage(args[0]);
         return;
     }
-    
+
     print("\n🎉 EAS test completed!\n", .{});
 }
 
@@ -65,12 +65,12 @@ fn printUsage(program_name: []const u8) void {
 fn runBasicEASTest(allocator: std.mem.Allocator) !void {
     print("📋 Basic EAS Functionality Test\n", .{});
     print("===============================\n", .{});
-    
+
     var service = eas.AttestationService.init(allocator);
     defer service.deinit();
-    
+
     print("✅ EAS service initialized\n", .{});
-    
+
     // Create a simple schema
     var schema = try eas.Schema.init(
         allocator,
@@ -80,10 +80,10 @@ fn runBasicEASTest(allocator: std.mem.Allocator) !void {
         [_]u8{1} ** 20,
     );
     defer schema.deinit();
-    
+
     try service.registerSchema(schema);
     print("✅ Schema registered\n", .{});
-    
+
     // Create an attester
     var attester = try eas.Attester.init(
         allocator,
@@ -91,10 +91,10 @@ fn runBasicEASTest(allocator: std.mem.Allocator) !void {
         [_]u8{2} ** 20,
     );
     defer attester.deinit();
-    
+
     try service.registerAttester(attester);
     print("✅ Attester registered\n", .{});
-    
+
     // Create an attestation
     const private_key = [_]u8{3} ** 32;
     const attestation = try service.createAttestation(
@@ -106,15 +106,15 @@ fn runBasicEASTest(allocator: std.mem.Allocator) !void {
         private_key,
         false, // is_private
     );
-    
+
     print("✅ Attestation created with ID: {}\n", .{
         std.fmt.fmtSliceHexLower(&attestation.id),
     });
-    
+
     // Verify the attestation
     const is_valid = service.verifyAttestation(attestation.id);
     print("✅ Attestation verification: {}\n", .{is_valid});
-    
+
     print("✅ Basic EAS test completed\n", .{});
 }
 
@@ -122,10 +122,10 @@ fn runBasicEASTest(allocator: std.mem.Allocator) !void {
 fn runSchemaTest(allocator: std.mem.Allocator) !void {
     print("📋 Schema Registration and Management Test\n", .{});
     print("==========================================\n", .{});
-    
+
     var service = eas.AttestationService.init(allocator);
     defer service.deinit();
-    
+
     // Create multiple schemas
     const schemas_data = [_]struct {
         name: []const u8,
@@ -152,7 +152,7 @@ fn runSchemaTest(allocator: std.mem.Allocator) !void {
             .creator = [_]u8{3} ** 20,
         },
     };
-    
+
     for (schemas_data, 0..) |schema_data, i| {
         var schema = try eas.Schema.init(
             allocator,
@@ -162,11 +162,11 @@ fn runSchemaTest(allocator: std.mem.Allocator) !void {
             schema_data.creator,
         );
         defer schema.deinit();
-        
+
         try service.registerSchema(schema);
         print("✅ Schema {} registered: {s}\n", .{ i + 1, schema.name });
     }
-    
+
     print("✅ Schema registration test completed\n", .{});
 }
 
@@ -174,10 +174,10 @@ fn runSchemaTest(allocator: std.mem.Allocator) !void {
 fn runAttesterTest(allocator: std.mem.Allocator) !void {
     print("📋 Attester Registration and Management Test\n", .{});
     print("============================================\n", .{});
-    
+
     var service = eas.AttestationService.init(allocator);
     defer service.deinit();
-    
+
     // Create multiple attesters
     const attesters_data = [_]struct {
         name: []const u8,
@@ -188,7 +188,7 @@ fn runAttesterTest(allocator: std.mem.Allocator) !void {
         .{ .name = "Employment Verification Service", .id = [_]u8{3} ** 20 },
         .{ .name = "Educational Institution", .id = [_]u8{4} ** 20 },
     };
-    
+
     for (attesters_data, 0..) |attester_data, i| {
         var attester = try eas.Attester.init(
             allocator,
@@ -196,11 +196,11 @@ fn runAttesterTest(allocator: std.mem.Allocator) !void {
             attester_data.id,
         );
         defer attester.deinit();
-        
+
         try service.registerAttester(attester);
         print("✅ Attester {} registered: {s}\n", .{ i + 1, attester.name });
     }
-    
+
     print("✅ Attester registration test completed\n", .{});
 }
 
@@ -208,10 +208,10 @@ fn runAttesterTest(allocator: std.mem.Allocator) !void {
 fn runAttestationTest(allocator: std.mem.Allocator) !void {
     print("📋 Attestation Creation and Management Test\n", .{});
     print("===========================================\n", .{});
-    
+
     var service = eas.AttestationService.init(allocator);
     defer service.deinit();
-    
+
     // Create schema
     var schema = try eas.Schema.init(
         allocator,
@@ -221,9 +221,9 @@ fn runAttestationTest(allocator: std.mem.Allocator) !void {
         [_]u8{1} ** 20,
     );
     defer schema.deinit();
-    
+
     try service.registerSchema(schema);
-    
+
     // Create attester
     var attester = try eas.Attester.init(
         allocator,
@@ -231,9 +231,9 @@ fn runAttestationTest(allocator: std.mem.Allocator) !void {
         [_]u8{2} ** 20,
     );
     defer attester.deinit();
-    
+
     try service.registerAttester(attester);
-    
+
     // Create multiple attestations
     const attestations_data = [_]struct {
         recipient: [20]u8,
@@ -244,9 +244,9 @@ fn runAttestationTest(allocator: std.mem.Allocator) !void {
         .{ .recipient = [_]u8{4} ** 20, .expiration = 0, .data = "Test data 2" },
         .{ .recipient = [_]u8{5} ** 20, .expiration = 0, .data = "Test data 3" },
     };
-    
+
     const private_key = [_]u8{6} ** 32;
-    
+
     for (attestations_data, 0..) |attestation_data, i| {
         const attestation = try service.createAttestation(
             schema.id,
@@ -257,13 +257,10 @@ fn runAttestationTest(allocator: std.mem.Allocator) !void {
             private_key,
             false, // is_private
         );
-        
-        print("✅ Attestation {} created with ID: {}\n", .{ 
-            i + 1, 
-            std.fmt.fmtSliceHexLower(&attestation.id) 
-        });
+
+        print("✅ Attestation {} created with ID: {}\n", .{ i + 1, std.fmt.fmtSliceHexLower(&attestation.id) });
     }
-    
+
     print("✅ Attestation creation test completed\n", .{});
 }
 
@@ -271,10 +268,10 @@ fn runAttestationTest(allocator: std.mem.Allocator) !void {
 fn runVerificationTest(allocator: std.mem.Allocator) !void {
     print("📋 Attestation Verification Test\n", .{});
     print("===============================\n", .{});
-    
+
     var service = eas.AttestationService.init(allocator);
     defer service.deinit();
-    
+
     // Create schema
     var schema = try eas.Schema.init(
         allocator,
@@ -284,9 +281,9 @@ fn runVerificationTest(allocator: std.mem.Allocator) !void {
         [_]u8{1} ** 20,
     );
     defer schema.deinit();
-    
+
     try service.registerSchema(schema);
-    
+
     // Create attester
     var attester = try eas.Attester.init(
         allocator,
@@ -294,9 +291,9 @@ fn runVerificationTest(allocator: std.mem.Allocator) !void {
         [_]u8{2} ** 20,
     );
     defer attester.deinit();
-    
+
     try service.registerAttester(attester);
-    
+
     // Create a valid attestation
     const private_key = [_]u8{3} ** 32;
     const valid_attestation = try service.createAttestation(
@@ -308,11 +305,11 @@ fn runVerificationTest(allocator: std.mem.Allocator) !void {
         private_key,
         false, // is_private
     );
-    
+
     // Verify valid attestation
     const is_valid = service.verifyAttestation(valid_attestation.id);
     print("✅ Valid attestation verification: {}\n", .{is_valid});
-    
+
     // Create an expired attestation
     const expired_attestation = try service.createAttestation(
         schema.id,
@@ -323,18 +320,18 @@ fn runVerificationTest(allocator: std.mem.Allocator) !void {
         private_key,
         false, // is_private
     );
-    
+
     // Verify expired attestation
     const is_expired_valid = service.verifyAttestation(expired_attestation.id);
     print("✅ Expired attestation verification: {}\n", .{is_expired_valid});
-    
+
     // Revoke the valid attestation
     try service.revokeAttestation(valid_attestation.id);
-    
+
     // Verify revoked attestation
     const is_revoked_valid = service.verifyAttestation(valid_attestation.id);
     print("✅ Revoked attestation verification: {}\n", .{is_revoked_valid});
-    
+
     print("✅ Verification test completed\n", .{});
 }
 
@@ -342,10 +339,10 @@ fn runVerificationTest(allocator: std.mem.Allocator) !void {
 fn runReputationTest(allocator: std.mem.Allocator) !void {
     print("📋 Attester Reputation System Test\n", .{});
     print("===============================\n", .{});
-    
+
     var service = eas.AttestationService.init(allocator);
     defer service.deinit();
-    
+
     // Create schema
     var schema = try eas.Schema.init(
         allocator,
@@ -355,9 +352,9 @@ fn runReputationTest(allocator: std.mem.Allocator) !void {
         [_]u8{1} ** 20,
     );
     defer schema.deinit();
-    
+
     try service.registerSchema(schema);
-    
+
     // Create attester
     var attester = try eas.Attester.init(
         allocator,
@@ -365,12 +362,12 @@ fn runReputationTest(allocator: std.mem.Allocator) !void {
         [_]u8{2} ** 20,
     );
     defer attester.deinit();
-    
+
     const initial_reputation = attester.reputation;
     print("📈 Initial reputation: {}\n", .{initial_reputation});
-    
+
     try service.registerAttester(attester);
-    
+
     // Create multiple attestations to increase reputation
     const private_key = [_]u8{3} ** 32;
     for (0..5) |i| {
@@ -383,13 +380,10 @@ fn runReputationTest(allocator: std.mem.Allocator) !void {
             private_key,
             false, // is_private
         );
-        
-        print("📈 Reputation after attestation {}: {}\n", .{ 
-            i + 1, 
-            service.getAttester(attester.id).?.reputation 
-        });
+
+        print("📈 Reputation after attestation {}: {}\n", .{ i + 1, service.getAttester(attester.id).?.reputation });
     }
-    
+
     print("✅ Reputation system test completed\n", .{});
 }
 
@@ -398,10 +392,10 @@ fn runReputationTest(allocator: std.mem.Allocator) !void {
 fn runPrivateAttestationTest(allocator: std.mem.Allocator) !void {
     print("📋 Private Attestation Test\n", .{});
     print("==========================\n", .{});
-    
+
     var service = eas.AttestationService.init(allocator);
     defer service.deinit();
-    
+
     // Create schema
     var schema = try eas.Schema.init(
         allocator,
@@ -411,9 +405,9 @@ fn runPrivateAttestationTest(allocator: std.mem.Allocator) !void {
         [_]u8{1} ** 20,
     );
     defer schema.deinit();
-    
+
     try service.registerSchema(schema);
-    
+
     // Create attester
     var attester = try eas.Attester.init(
         allocator,
@@ -421,12 +415,12 @@ fn runPrivateAttestationTest(allocator: std.mem.Allocator) !void {
         [_]u8{2} ** 20,
     );
     defer attester.deinit();
-    
+
     try service.registerAttester(attester);
-    
+
     // Create a private attestation
     const private_key = [_]u8{3} ** 32;
-    
+
     const private_attestation = try service.createPrivateAttestation(
         schema.id,
         attester.id,
@@ -435,45 +429,45 @@ fn runPrivateAttestationTest(allocator: std.mem.Allocator) !void {
         "{\"name\": \"Alice\", \"ssn\": \"123-45-6789\", \"address\": \"123 Main St\"}",
         private_key,
     );
-    
+
     print("✅ Private attestation created with ID: {}\n", .{
         std.fmt.fmtSliceHexLower(&private_attestation.id),
     });
-    
+
     // Verify the private attestation
     const is_valid = service.verifyAttestation(private_attestation.id);
     print("✅ Private attestation verification: {}\n", .{is_valid});
-    
+
     // Check that it's private
     print("✅ Is private attestation: {}\n", .{private_attestation.is_private});
-    
+
     print("✅ Private attestation test completed\n", .{});
 }
 
 fn runAllEASTests(allocator: std.mem.Allocator) !void {
     print("🎯 Comprehensive EAS Test Suite\n", .{});
     print("===============================\n", .{});
-    
+
     try runBasicEASTest(allocator);
     print("\n", .{});
-    
+
     try runSchemaTest(allocator);
     print("\n", .{});
-    
+
     try runAttesterTest(allocator);
     print("\n", .{});
-    
+
     try runAttestationTest(allocator);
     print("\n", .{});
-    
+
     try runVerificationTest(allocator);
     print("\n", .{});
-    
+
     try runReputationTest(allocator);
     print("\n", .{});
-    
+
     try runPrivateAttestationTest(allocator);
-    
+
     print("\n📊 EAS Implementation Status\n", .{});
     print("============================\n", .{});
     print("📋 Basic EAS: ✅ Implemented\n", .{});

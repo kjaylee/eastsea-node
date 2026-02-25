@@ -2,7 +2,6 @@ const std = @import("std");
 
 /// REQ-021: RPC mock 응답 제거 — 실데이터 검증
 /// UT-021-01: getNodeInfo 등 RPC 응답에서 mock 값 의존 제거
-
 /// RPC 응답 검증기: mock/stub/dummy 값 탐지
 pub fn validateRpcResponse(response: []const u8) bool {
     // mock/stub 패턴 탐지

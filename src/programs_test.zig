@@ -79,7 +79,7 @@ fn runSystemProgramTest(allocator: std.mem.Allocator) !void {
 
     // 계정 생성 테스트
     print("📝 Testing account creation...\n", .{});
-    
+
     const system_program_id = [_]u8{0} ** 32;
     const from_account = [_]u8{1} ** 32;
     const to_account = [_]u8{2} ** 32;
@@ -109,7 +109,7 @@ fn runSystemProgramTest(allocator: std.mem.Allocator) !void {
 
     // 전송 테스트
     print("\n💸 Testing transfer...\n", .{});
-    
+
     const transfer_data = [_]u8{1}; // Transfer command
     const transfer_instruction = Instruction.init(system_program_id, accounts[0..], transfer_data[0..]);
 
@@ -149,7 +149,7 @@ fn runTokenProgramTest(allocator: std.mem.Allocator) !void {
 
     // 토큰 민트 초기화 테스트
     print("🏭 Testing token mint initialization...\n", .{});
-    
+
     var mint_accounts = [_]Instruction.AccountMeta{
         .{ .pubkey = mint_account, .is_signer = true, .is_writable = true },
     };
@@ -174,7 +174,7 @@ fn runTokenProgramTest(allocator: std.mem.Allocator) !void {
 
     // 토큰 계정 초기화 테스트
     print("\n🏦 Testing token account initialization...\n", .{});
-    
+
     var account_accounts = [_]Instruction.AccountMeta{
         .{ .pubkey = token_account, .is_signer = true, .is_writable = true },
         .{ .pubkey = mint_account, .is_signer = false, .is_writable = false },
@@ -200,7 +200,7 @@ fn runTokenProgramTest(allocator: std.mem.Allocator) !void {
 
     // 토큰 발행 테스트
     print("\n💰 Testing token minting...\n", .{});
-    
+
     const mint_to_data = [_]u8{2}; // Mint to command
     const mint_to_instruction = Instruction.init(token_program_id, account_accounts[0..], mint_to_data[0..]);
 

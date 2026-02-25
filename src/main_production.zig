@@ -21,6 +21,7 @@ const monitoring = @import("monitoring.zig");
 const diagnostics = @import("diagnostics.zig");
 const persistence = @import("persistence.zig");
 const rbac = @import("rbac.zig");
+const web_dashboard = @import("web_dashboard.zig");
 
 pub fn main() !void {
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
@@ -143,9 +144,16 @@ pub fn main() !void {
     });
 
     // ========================================
-    // Phase 6: 코어 시작
+    // Phase 6: 웹 대시보드 + 코어 시작
     // ========================================
     print("\n🚀 Phase 6: 코어 시작...\n", .{});
+
+    // 웹 대시보드 시작 (별도 스레드)
+    var web_server = web_dashboard.WebServer.init(allocator, node_config.rpc_port);
+    web_server.start() catch |err| {
+        print("⚠️  웹 대시보드 시작 실패: {} (노드는 계속 실행)\n", .{err});
+    };
+    defer web_server.stop();
 
     if (demo_mode) {
         try runDemo(allocator, node_config);

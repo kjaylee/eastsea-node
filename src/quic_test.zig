@@ -65,21 +65,21 @@ fn runBasicQUICTest(allocator: std.mem.Allocator) !void {
     _ = allocator;
     print("🔗 Basic QUIC Connection Test\n", .{});
     print("=============================\n", .{});
-    
+
     // In a real implementation, this would create a QUIC connection
     print("📝 Creating QUIC server configuration...\n", .{});
     print("📝 Initializing QUIC endpoint...\n", .{});
     print("📝 Starting QUIC listener on port 4433...\n", .{});
     print("📝 Establishing QUIC connection to localhost:4433...\n", .{});
     print("✅ QUIC connection established successfully\n", .{});
-    
+
     // Simulate connection establishment
     print("📝 Testing 0-RTT connection resumption...\n", .{});
     print("✅ 0-RTT connection resumption working\n", .{});
-    
+
     print("📝 Testing connection migration...\n", .{});
     print("✅ Connection migration supported\n", .{});
-    
+
     print("✅ Basic QUIC test completed\n", .{});
 }
 
@@ -88,22 +88,22 @@ fn runMultiStreamTest(allocator: std.mem.Allocator) !void {
     _ = allocator;
     print("🌊 Multi-Stream QUIC Test\n", .{});
     print("=========================\n", .{});
-    
+
     print("📝 Creating bidirectional streams...\n", .{});
     print("✅ Bidirectional streams working\n", .{});
-    
+
     print("📝 Testing stream multiplexing...\n", .{});
     print("✅ Stream multiplexing working\n", .{});
-    
+
     print("📝 Testing flow control per stream...\n", .{});
     print("✅ Flow control per stream working\n", .{});
-    
+
     print("📝 Testing stream priority handling...\n", .{});
     print("✅ Stream priority handling working\n", .{});
-    
+
     print("📝 Testing concurrent block/transaction streaming...\n", .{});
     print("✅ Concurrent block/transaction streaming working\n", .{});
-    
+
     print("✅ Multi-stream test completed\n", .{});
 }
 
@@ -112,22 +112,22 @@ fn runQUICSecurityTest(allocator: std.mem.Allocator) !void {
     _ = allocator;
     print("🔒 QUIC Security Features Test\n", .{});
     print("==============================\n", .{});
-    
+
     print("📝 Testing connection ID encryption...\n", .{});
     print("✅ Connection ID encryption working\n", .{});
-    
+
     print("📝 Testing packet authentication...\n", .{});
     print("✅ Packet authentication working\n", .{});
-    
+
     print("📝 Testing forward secrecy...\n", .{});
     print("✅ Forward secrecy working\n", .{});
-    
+
     print("📝 Testing DDoS protection...\n", .{});
     print("✅ DDoS protection working\n", .{});
-    
+
     print("📝 Testing replay attack prevention...\n", .{});
     print("✅ Replay attack prevention working\n", .{});
-    
+
     print("✅ Security test completed\n", .{});
 }
 
@@ -136,22 +136,22 @@ fn runQUICPerformanceTest(allocator: std.mem.Allocator) !void {
     _ = allocator;
     print("⚡ QUIC Performance Benchmark\n", .{});
     print("============================\n", .{});
-    
+
     print("📝 Measuring connection establishment latency...\n", .{});
     print("📊 Latency: 15ms (vs 120ms for TCP+TLS)\n", .{});
-    
+
     print("📝 Measuring throughput...\n", .{});
     print("📊 Throughput: 8.2 Gbps\n", .{});
-    
+
     print("📝 Comparing QUIC vs TCP performance...\n", .{});
     print("📊 QUIC is 3.5x faster than TCP+TLS\n", .{});
-    
+
     print("📝 Testing congestion control...\n", .{});
     print("✅ BBR congestion control working\n", .{});
-    
+
     print("📝 Testing packet loss recovery...\n", .{});
     print("📊 Recovery time: 12ms (vs 250ms for TCP)\n", .{});
-    
+
     print("✅ Performance test completed\n", .{});
 }
 
@@ -159,7 +159,7 @@ fn runQUICPerformanceTest(allocator: std.mem.Allocator) !void {
 fn runAllQUICTests(allocator: std.mem.Allocator) !void {
     print("🎯 Comprehensive QUIC Test Suite\n", .{});
     print("================================\n", .{});
-    
+
     try runBasicQUICTest(allocator);
     print("\n", .{});
     try runMultiStreamTest(allocator);
@@ -167,7 +167,7 @@ fn runAllQUICTests(allocator: std.mem.Allocator) !void {
     try runQUICSecurityTest(allocator);
     print("\n", .{});
     try runQUICPerformanceTest(allocator);
-    
+
     print("\n📊 QUIC Implementation Status\n", .{});
     print("============================\n", .{});
     print("🔗 Basic QUIC: ✅ Implemented\n", .{});
@@ -179,7 +179,7 @@ fn runAllQUICTests(allocator: std.mem.Allocator) !void {
 
 test "QUIC basic functionality test" {
     const testing = std.testing;
-    
+
     // Test that our QUIC implementation framework works
     try testing.expect(true);
 }

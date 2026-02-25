@@ -3,7 +3,6 @@ const builtin = @import("builtin");
 
 /// REQ-112: 실행 진단 리포트 (HW/OS 요약)
 /// UT-112-01: generateReport
-
 pub fn generateReport(allocator: std.mem.Allocator) ![]u8 {
     const os_name = @tagName(builtin.os.tag);
     const arch_name = @tagName(builtin.cpu.arch);

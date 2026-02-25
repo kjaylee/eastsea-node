@@ -69,12 +69,12 @@ pub fn main() !void {
     var iteration: u32 = 0;
     while (iteration < 20) { // Run for 20 iterations
         iteration += 1;
-        
+
         std.debug.print("\n--- Iteration {} ---\n", .{iteration});
-        
+
         // Show network status
         showNetworkStatus(&p2p_node, &bootstrap_client, &mdns_discovery);
-        
+
         // Periodically announce service
         if (iteration % 5 == 0) {
             std.debug.print("📢 Announcing mDNS service...\n", .{});
@@ -82,7 +82,7 @@ pub fn main() !void {
                 std.debug.print("⚠️  Failed to announce service: {}\n", .{err});
             };
         }
-        
+
         // Periodically query for services
         if (iteration % 7 == 0) {
             std.debug.print("🔍 Querying for mDNS services...\n", .{});
@@ -90,13 +90,13 @@ pub fn main() !void {
                 std.debug.print("⚠️  Failed to query services: {}\n", .{err});
             };
         }
-        
+
         // Cleanup stale entries
         if (iteration % 10 == 0) {
             std.debug.print("🧹 Cleaning up stale mDNS entries...\n", .{});
             mdns_discovery.cleanupStaleEntries();
         }
-        
+
         // Ping all peers
         if (iteration % 3 == 0) {
             std.debug.print("🏓 Pinging all peers...\n", .{});
@@ -104,7 +104,7 @@ pub fn main() !void {
                 std.debug.print("⚠️  Failed to ping peers: {}\n", .{err});
             };
         }
-        
+
         // Simulate discovering a peer (for demonstration when real mDNS doesn't work)
         if (iteration == 5 and !mdns_discovery.running) {
             std.debug.print("🎭 Simulating peer discovery...\n", .{});
@@ -112,7 +112,7 @@ pub fn main() !void {
                 std.debug.print("⚠️  Failed to simulate peer discovery: {}\n", .{err});
             };
         }
-        
+
         std.time.sleep(3_000_000_000); // 3 seconds
     }
 
@@ -143,7 +143,7 @@ fn showFinalStatus(p2p_node: *p2p.P2PNode, bootstrap_client: *bootstrap.Bootstra
     std.debug.print("   Bootstrap nodes configured: {}\n", .{bootstrap_client.getBootstrapNodeCount()});
     std.debug.print("   Total peers discovered via mDNS: {}\n", .{mdns_discovery.getDiscoveredPeerCount()});
     std.debug.print("   Active mDNS peers: {}\n", .{mdns_discovery.getActivePeerCount()});
-    
+
     if (mdns_discovery.running) {
         std.debug.print("✅ mDNS discovery was running successfully\n", .{});
     } else {
@@ -154,17 +154,17 @@ fn showFinalStatus(p2p_node: *p2p.P2PNode, bootstrap_client: *bootstrap.Bootstra
 fn simulatePeerDiscovery(mdns_discovery: *mdns.MDNSDiscovery, bootstrap_client: *bootstrap.BootstrapClient, p2p_node: *p2p.P2PNode) !void {
     // Suppress unused parameter warnings
     _ = mdns_discovery;
-    
+
     // Simulate discovering peers on different ports
     const mock_ports = [_]u16{ 8001, 8002, 8003 };
-    
+
     for (mock_ports) |port| {
         if (port != p2p_node.address.getPort()) { // Don't discover ourselves
             std.debug.print("🎭 Simulating discovery of peer at 127.0.0.1:{}\n", .{port});
-            
+
             // Add to bootstrap client
             try bootstrap_client.addBootstrapNode("127.0.0.1", port);
-            
+
             // Try to connect via P2P
             const peer_address = try std.net.Address.parseIp4("127.0.0.1", port);
             _ = p2p_node.connectToPeer(peer_address) catch |err| {
@@ -177,26 +177,26 @@ fn simulatePeerDiscovery(mdns_discovery: *mdns.MDNSDiscovery, bootstrap_client: 
 test "mDNS discovery integration" {
     const testing = std.testing;
     const allocator = testing.allocator;
-    
+
     // Test mDNS discovery creation
     var mdns_discovery = try mdns.MDNSDiscovery.init(allocator, "127.0.0.1", 8000);
     defer mdns_discovery.deinit();
-    
+
     try testing.expect(mdns_discovery.getDiscoveredPeerCount() == 0);
     try testing.expect(!mdns_discovery.running);
-    
+
     // Test P2P node creation
     var p2p_node = try p2p.P2PNode.init(allocator, 8000);
     defer p2p_node.deinit();
-    
+
     // Test bootstrap client creation
     var bootstrap_client = try bootstrap.BootstrapClient.init(allocator, "127.0.0.1", 8000);
     defer bootstrap_client.deinit();
-    
+
     // Test attachments
     mdns_discovery.attachP2PNode(&p2p_node);
     mdns_discovery.attachBootstrapClient(&bootstrap_client);
-    
+
     try testing.expect(mdns_discovery.p2p_node != null);
     try testing.expect(mdns_discovery.bootstrap_client != null);
 }
@@ -204,20 +204,20 @@ test "mDNS discovery integration" {
 test "mDNS message creation" {
     const testing = std.testing;
     const allocator = testing.allocator;
-    
+
     // Test mDNS message creation
     var message = mdns.MDNSMessage.init(allocator, 1234, false);
     defer message.deinit();
-    
+
     try testing.expect(message.header.id == 1234);
     try testing.expect(!message.header.isResponse());
     try testing.expect(message.questions.items.len == 0);
     try testing.expect(message.answers.items.len == 0);
-    
+
     // Test adding question
     const question = try mdns.MDNSQuestion.init(allocator, "_eastsea._tcp.local", .PTR, .IN);
     try message.addQuestion(question);
-    
+
     try testing.expect(message.questions.items.len == 1);
     try testing.expect(message.header.questions == 1);
 }

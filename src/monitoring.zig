@@ -4,7 +4,6 @@ const std = @import("std");
 /// UT-121-01: collectMetrics — CPU/메모리/디스크 수집
 /// UT-121-02: healthCheck — 노드 상태 판정
 /// UT-121-03: alertThreshold — 임계치 초과 알림
-
 pub const Metrics = struct {
     uptime_seconds: i64 = 0,
     block_height: u64 = 0,

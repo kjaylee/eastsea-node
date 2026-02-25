@@ -34,7 +34,7 @@ pub fn main() !void {
 
     // 설정 조정
     announcer.announce_interval_ms = 10000; // 10초마다 공지 (테스트용)
-    announcer.peer_timeout_ms = 30000;      // 30초 타임아웃
+    announcer.peer_timeout_ms = 30000; // 30초 타임아웃
 
     print("⚙️ Configuration:\n", .{});
     print("  - Local port: {}\n", .{announcer.local_port});
@@ -47,7 +47,7 @@ pub fn main() !void {
     // 노드 ID 생성
     var node_id: [32]u8 = undefined;
     std.crypto.random.bytes(&node_id);
-    
+
     print("🆔 Node ID: ", .{});
     for (node_id[0..8]) |byte| {
         print("{x:0>2}", .{byte});
@@ -66,12 +66,12 @@ pub fn main() !void {
     var iteration: u32 = 0;
     while (true) {
         std.time.sleep(5000 * std.time.ns_per_ms); // 5초마다 상태 출력
-        
+
         iteration += 1;
         print("📊 Status Update #{}\n", .{iteration});
         print("===================\n", .{});
         announcer.printStatus();
-        
+
         const peers = announcer.getDiscoveredPeers();
         if (peers.len > 0) {
             print("\n🔍 Detailed peer information:\n", .{});
@@ -94,9 +94,9 @@ pub fn main() !void {
             print("  - Check firewall settings\n", .{});
             print("  - Ensure UDP ports are accessible\n", .{});
         }
-        
+
         print("----------------------------------------\n\n", .{});
-        
+
         // 10번 반복 후 종료 (무한 루프 방지)
         if (iteration >= 10) {
             print("🔄 Test completed after {} iterations\n", .{iteration});
@@ -106,14 +106,14 @@ pub fn main() !void {
 
     print("\n🛑 Stopping broadcast announcer...\n", .{});
     announcer.stop();
-    
+
     print("✨ Broadcast test completed!\n", .{});
-    
+
     // 최종 결과 요약
     print("\n📈 Final Results:\n", .{});
     print("================\n", .{});
     print("Total peers discovered: {}\n", .{announcer.getDiscoveredPeers().len});
-    
+
     if (announcer.getDiscoveredPeers().len > 0) {
         print("Discovered peers:\n", .{});
         for (announcer.getDiscoveredPeers()) |peer| {

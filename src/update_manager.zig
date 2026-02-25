@@ -5,7 +5,6 @@ const fs = std.fs;
 /// UT-120-01: downloadUpdate — 다운로드 시뮬레이션
 /// UT-120-02: verifyChecksum — 무결성 검증
 /// UT-120-03: atomicSwap — 원자적 바이너리 교체
-
 pub fn downloadUpdate(allocator: std.mem.Allocator, version: []const u8) ![]u8 {
     const url = try std.fmt.allocPrint(allocator, "https://releases.eastsea.xyz/v{s}/eastsea", .{version});
     std.debug.print("📥 다운로드 시뮬레이션: {s}\n", .{url});
